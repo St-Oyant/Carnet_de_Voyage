@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Carnet Irlande">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Carnet de voyage — Irlande 2026</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --border:#2a2f3a;
+    --text:#e9ecf1; --muted:#8b93a3; --accent:#3ddc84; --accent2:#4da3ff;
+    --warn:#ffb84d; --danger:#ff6b6b; --resto:#ffb84d;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overscroll-behavior-y:none; height:100%;}
+  body{display:flex; flex-direction:column; height:100dvh;}
+  a{color:inherit;}
+  button{font-family:inherit; cursor:pointer; border:none; -webkit-user-select:none; user-select:none;}
+  .hidden{display:none !important;}
+
+  /* ---------- Header ---------- */
+  header{
+    flex-shrink:0; background:var(--panel); border-bottom:1px solid var(--border);
+    padding-top:calc(var(--safe-top) + 8px);
+  }
+  .trip-title{font-size:14px; font-weight:700; text-align:center; padding:0 12px 8px; color:var(--muted); letter-spacing:.3px;}
+  .day-strip{display:flex; overflow-x:auto; gap:6px; padding:0 10px 10px; scroll-behavior:smooth; -webkit-overflow-scrolling:touch;}
+  .day-strip::-webkit-scrollbar{display:none;}
+  .day-chip{
+    flex-shrink:0; min-width:52px; padding:6px 8px; border-radius:12px; background:var(--panel2);
+    border:1px solid var(--border); text-align:center; font-size:11px; color:var(--muted);
+  }
+  .day-chip .dnum{font-size:15px; font-weight:800; color:var(--text); display:block;}
+  .day-chip.active{background:var(--accent); border-color:var(--accent); color:#08130d;}
+  .day-chip.active .dnum{color:#08130d;}
+  .day-chip.today-marker{box-shadow:0 0 0 2px var(--accent2) inset;}
+
+  .day-nav{display:flex; align-items:center; justify-content:space-between; padding:0 10px 10px; gap:8px;}
+  .day-nav button{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    border-radius:10px; padding:8px 14px; font-size:16px; flex-shrink:0;
+  }
+  .day-nav .day-label{flex:1; text-align:center;}
+  .day-nav .day-label .big{font-size:16px; font-weight:800;}
+  .day-nav .day-label .sub{font-size:12px; color:var(--muted);}
+
+  /* ---------- Main scroll area ---------- */
+  main{flex:1; overflow-y:auto; padding:12px 12px calc(90px + var(--safe-bottom));  -webkit-overflow-scrolling:touch;}
+
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:12px;}
+  .card h3{margin:0 0 10px; font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); display:flex; align-items:center; gap:6px;}
+  .card.hero{background:linear-gradient(160deg, #1c2b22, var(--panel)); border-color:#2c4a37;}
+  .card.hero.ferry{background:linear-gradient(160deg, #17242f, var(--panel)); border-color:#294356;}
+
+  .big-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:15px; border-radius:12px; font-size:16px; font-weight:700;
+    background:var(--accent); color:#08130d; margin-bottom:8px;
+  }
+  .big-btn.blue{background:var(--accent2); color:#081522;}
+  .big-btn.ghost{background:var(--panel2); color:var(--text); border:1px solid var(--border);}
+  .btn-row{display:flex; gap:8px;}
+  .btn-row .big-btn{margin-bottom:0;}
+
+  .info-line{display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); gap:10px;}
+  .info-line:last-child{border-bottom:none;}
+  .info-line .label{font-size:12px; color:var(--muted);}
+  .info-line .value{font-size:15px; font-weight:600; text-align:right;}
+  .copy-btn{background:var(--panel2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:5px 10px; font-size:12px; flex-shrink:0;}
+  .copy-btn.copied{background:var(--accent); color:#08130d; border-color:var(--accent);}
+
+  .lang-toggle{display:flex; gap:6px; margin-bottom:12px;}
+  .lang-toggle button{flex:1; padding:9px; border-radius:9px; background:var(--panel2); border:1px solid var(--border); color:var(--muted); font-size:13px; font-weight:700;}
+  .lang-toggle button.active{background:var(--accent2); color:#081522; border-color:var(--accent2);}
+
+  .item-card{background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px;}
+  .item-card.done{opacity:.45;}
+  .item-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .item-name{font-size:15px; font-weight:700;}
+  .item-name.strike{text-decoration:line-through;}
+  .item-badges{display:flex; gap:5px; flex-wrap:wrap; margin:5px 0;}
+  .pill{font-size:10px; padding:3px 7px; border-radius:20px; font-weight:700; white-space:nowrap;}
+  .pill.dur-s{background:#1f3a2a; color:#5fe08a;}
+  .pill.dur-m{background:#3a2f1a; color:#ffcb70;}
+  .pill.dur-l{background:#3a1a1a; color:#ff8f8f;}
+  .pill.indoor{background:#1a2c3a; color:#7fc3ff;}
+  .pill.outdoor{background:#233a1a; color:#a9e07f;}
+  .pill.resto{background:#3a2a12; color:var(--resto);}
+  .item-desc{font-size:12.5px; color:var(--muted); margin:6px 0; line-height:1.4;}
+  .item-actions{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;}
+  .item-actions button, .item-actions a{
+    font-size:12.5px; padding:7px 11px; border-radius:8px; background:var(--panel); border:1px solid var(--border); color:var(--text);
+    text-decoration:none; display:inline-flex; align-items:center; gap:4px;
+  }
+  .check-btn{background:var(--panel) !important;}
+  .check-btn.on{background:var(--accent) !important; color:#08130d !important; border-color:var(--accent) !important;}
+
+  .nearby-wrap{margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);}
+  .nearby-head{font-size:11px; color:var(--resto); font-weight:700; margin-bottom:6px;}
+  .nearby-item{background:var(--panel); border-radius:9px; padding:8px 10px; margin-bottom:6px; font-size:13px;}
+  .nearby-item .n-name{font-weight:700;}
+  .nearby-item .n-desc{color:var(--muted); font-size:11.5px; margin-top:3px; line-height:1.35;}
+  .nearby-item a{color:var(--accent2); font-size:11.5px;}
+
+  .empty-note{font-size:13px; color:var(--muted); text-align:center; padding:14px;}
+  .section-toggle{display:flex; gap:8px; margin-bottom:10px;}
+  .section-toggle button{flex:1; padding:8px; border-radius:9px; background:var(--panel2); border:1px solid var(--border); color:var(--muted); font-size:12.5px; font-weight:700;}
+  .section-toggle button.active{background:var(--panel); color:var(--text); border-color:var(--accent2);}
+
+  /* Planning / timeline */
+  .step-block{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px;}
+  .step-block.current{border-color:var(--accent);}
+  .step-block .st-top{display:flex; justify-content:space-between; align-items:center;}
+  .step-block .st-name{font-weight:800; font-size:15px;}
+  .step-block .st-dates{font-size:12px; color:var(--muted);}
+  .step-block .st-meta{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .step-block .st-days{display:flex; gap:5px; margin-top:8px; flex-wrap:wrap;}
+  .step-block .st-days span{
+    font-size:11px; padding:4px 8px; border-radius:8px; background:var(--panel2); border:1px solid var(--border); color:var(--muted);
+  }
+  .step-block .st-days span.today{background:var(--accent); color:#08130d; border-color:var(--accent); font-weight:800;}
+
+  /* Restos tab filter */
+  .resto-filter{display:flex; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:8px;}
+  .resto-filter button{flex-shrink:0; padding:7px 12px; border-radius:20px; background:var(--panel2); border:1px solid var(--border); color:var(--muted); font-size:12.5px;}
+  .resto-filter button.active{background:var(--resto); color:#2a1c05; border-color:var(--resto); font-weight:700;}
+
+  /* Modal (reception mode) */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:flex-end; z-index:50;
+  }
+  .modal-overlay.hidden{display:none;}
+  .modal-sheet{
+    background:var(--panel); border-radius:20px 20px 0 0; padding:18px 18px calc(18px + var(--safe-bottom)); width:100%; max-height:88vh; overflow-y:auto;
+  }
+  .modal-sheet .m-close{width:36px; height:4px; background:var(--border); border-radius:3px; margin:0 auto 14px; }
+  .modal-sheet h2{margin:0 0 4px; font-size:19px;}
+  .modal-sheet .m-sub{font-size:12.5px; color:var(--muted); margin-bottom:14px;}
+
+  /* Bottom tab bar */
+  nav.tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    display:flex; background:var(--panel); border-top:1px solid var(--border);
+    padding-bottom:var(--safe-bottom);
+  }
+  nav.tabbar button{
+    flex:1; background:none; padding:10px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:3px;
+    color:var(--muted); font-size:10.5px; font-weight:700;
+  }
+  nav.tabbar button .ic{font-size:20px;}
+  nav.tabbar button.active{color:var(--accent);}
+
+  .swipe-area{touch-action:pan-y;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="trip-title" id="tripTitle">Irlande — Août 2026</div>
+  <div class="day-strip" id="dayStrip"></div>
+  <div class="day-nav">
+    <button id="prevDay">‹</button>
+    <div class="day-label">
+      <div class="big" id="dayBig">—</div>
+      <div class="sub" id="daySub">—</div>
+    </div>
+    <button id="nextDay">›</button>
+  </div>
+</header>
+
+<main id="view" class="swipe-area"></main>
+
+<nav class="tabbar">
+  <button data-tab="today" class="active"><span class="ic">📍</span>Aujourd'hui</button>
+  <button data-tab="planning"><span class="ic">🗺️</span>Planning</button>
+  <button data-tab="restos"><span class="ic">🍽️</span>Restos</button>
+</nav>
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal-sheet" id="modalSheet"></div>
+</div>
+
+<script>
+// =====================================================================
+// DONNÉES DU VOYAGE — embarquées (carnet personnel, partagé en famille)
+// =====================================================================
+const TRIP = {"version":1,"name":"Irlande - Août 2026","steps":[{"id":"s1","name":"Traversée Roscoff → Cork (ferry aller)","arrival":"2026-08-04","departure":"2026-08-05","notes":"Ferry Roscoff → Cork/Ringaskiddy (navire Armorique). Départ 04/08 19h30 (pré-embarquement 18h00, présentation au plus tard 45 min avant), arrivée 05/08 09h30. Réf. réservation Brittany Ferries : UM2766X. Cabine Club 4 couchettes avec hublot, douche/WC, TV. Passagers : Antoine Saintoyant, Amélie Renard, Enora Saintoyant (10/04/2020), Ophélie Saintoyant (22/10/2021). Véhicule VW Golf GG125PJ. Large Food Pass inclus (aller). Montant total du dossier (aller+retour) : 1141 €.","hotel":null},{"id":"s2","name":"Killarney (Co. Kerry)","arrival":"2026-08-05","departure":"2026-08-09","notes":"Base pour le Ring of Kerry, la péninsule de Dingle, le parc national de Killarney et les îles Skellig.","hotel":{"name":"Park Place Apartments","bookingRef":"","address":"Killarney, Co. Kerry, Irlande","checkIn":"2026-08-05","checkOut":"2026-08-09","phone":"","price":"791,38 €","mapsLink":"https://www.google.com/maps/search/?api=1&query=Park+Place+Apartments+Killarney+Ireland","notes":"Réservation confirmée."}},{"id":"s3","name":"Ennis (Co. Clare)","arrival":"2026-08-09","departure":"2026-08-11","notes":"Base pour les Falaises de Moher et le château de Bunratty.","hotel":{"name":"Hotel Woodstock Ennis","bookingRef":"","address":"Ennis, Co. Clare, Irlande","checkIn":"2026-08-09","checkOut":"2026-08-11","phone":"","price":"478 €","mapsLink":"https://www.google.com/maps/search/?api=1&query=Hotel+Woodstock+Ennis+Ireland","notes":"Réservation confirmée."}},{"id":"s4","name":"Renvyle - Connemara (Co. Galway)","arrival":"2026-08-11","departure":"2026-08-13","notes":"Base en Connemara, à côté de Killary Harbour et de l'abbaye de Kylemore.","hotel":{"name":"The Olde Castle B&B","bookingRef":"","address":"Renvyle, Co. Galway, Irlande","checkIn":"2026-08-11","checkOut":"2026-08-13","phone":"","price":"494 €","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Olde+Castle+B%26B+Renvyle+Ireland","notes":"Réservation confirmée."}},{"id":"s5","name":"Ballintogher (Co. Sligo)","arrival":"2026-08-13","departure":"2026-08-14","notes":"Étape courte d'une nuit qui casse la route vers l'Irlande du Nord — Keshcorran Caves et le Queen Maeve's Trail sont juste à côté.","hotel":{"name":"The Coachhouse @ Kingsfort House","bookingRef":"","address":"Ballintogher, Co. Sligo, Irlande","checkIn":"2026-08-13","checkOut":"2026-08-14","phone":"","price":"290 €","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Coachhouse+Kingsfort+House+Ballintogher+Ireland","notes":"Réservation confirmée."}},{"id":"s6","name":"Ballymena - Antrim (Irlande du Nord)","arrival":"2026-08-14","departure":"2026-08-17","notes":"Base pour la Chaussée des Géants, Carrick-a-Rede, les Dark Hedges et Belfast.","hotel":{"name":"Meadow View B&B","bookingRef":"","address":"Ballymena, Co. Antrim, Irlande du Nord","checkIn":"2026-08-14","checkOut":"2026-08-17","phone":"","price":"785 €","mapsLink":"https://www.google.com/maps/search/?api=1&query=Meadow+View+B%26B+Ballymena+Northern+Ireland","notes":"Réservation confirmée."}},{"id":"s7","name":"Kilkenny","arrival":"2026-08-17","departure":"2026-08-19","notes":"Dernière étape avant le retour : château de Kilkenny et Rock of Cashel à proximité. Compter ~1h30-2h de route jusqu'au ferry à Cork le 19/08.","hotel":{"name":"Kilkenny House Boutique Hotel","bookingRef":"","address":"Kilkenny, Irlande","checkIn":"2026-08-17","checkOut":"2026-08-19","phone":"","price":"572,40 €","mapsLink":"https://www.google.com/maps/search/?api=1&query=Kilkenny+House+Boutique+Hotel+Ireland","notes":"Réservation confirmée."}},{"id":"s8","name":"Traversée Cork → Roscoff (ferry retour)","arrival":"2026-08-19","departure":"2026-08-20","notes":"Ferry Cork/Ringaskiddy → Roscoff (navire Armorique). Départ 19/08 16h00, arrivée 20/08 08h00. Réf. réservation UM2766X. Cabine Club 4 couchettes. Large Food Pass inclus (retour).","hotel":null}],"items":[{"id":"i1","type":"activite","name":"Château de Kilkenny","mapsLink":"https://www.google.com/maps/search/?api=1&query=Ch%C3%A2teau+de+Kilkenny+Ireland","image":"","description":"Château historique en plein centre-ville, 4,7★ (15 010 avis). Jardins et parc attenant.","duration":90,"link":{"kind":"step","stepId":"s7"},"indoor":true},{"id":"i2","type":"activite","name":"Rock of Cashel","mapsLink":"https://www.google.com/maps/search/?api=1&query=Rock+of+Cashel+Ireland","image":"","description":"Site historique majeur du Tipperary, 4,6★ (17 115 avis). ~45 min de Kilkenny.","duration":90,"link":{"kind":"step","stepId":"s7"},"indoor":false},{"id":"i3","type":"activite","name":"Brú na Bóinne","mapsLink":"https://www.google.com/maps/search/?api=1&query=Br%C3%BA+na+B%C3%B3inne+Ireland","image":"","description":"Newgrange + Knowth. ⚠️ RÉSERVATION OBLIGATOIRE en août, ouverture des créneaux à J-30 (billets en ligne chaque nuit à minuit) — aucun billet sur place. Compter ~3h et non 1h. Famille 48 €, gratuit <12 ans (mais tout le monde doit figurer sur la résa). Couloir bas et étroit.","duration":180,"link":{"kind":"transit","fromStepId":"s6","toStepId":"s7"},"indoor":true},{"id":"i4","type":"activite","name":"Belfast","mapsLink":"https://www.google.com/maps/search/?api=1&query=Belfast+Ireland","image":"","description":"Titanic Belfast, jardins botaniques, murals. ⚠️ Furkot n'y prévoit qu'1h : irréaliste, le Titanic seul demande 2-3h. Compter une demi-journée. ~40 min de Ballymena.","duration":240,"link":{"kind":"step","stepId":"s6"},"indoor":true},{"id":"i5","type":"activite","name":"Château de Bunratty","mapsLink":"https://www.google.com/maps/search/?api=1&query=Ch%C3%A2teau+de+Bunratty+Ireland","image":"","description":"Château + folk park, 4,6★ (15 564 avis). Proche d'Ennis.","duration":120,"link":{"kind":"step","stepId":"s3"},"indoor":true},{"id":"i6","type":"activite","name":"Killarney (ville et lacs)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Killarney+Ireland","image":"","description":"Ville et lacs, point de départ du Ring of Kerry.","duration":90,"link":{"kind":"step","stepId":"s2"},"indoor":true},{"id":"i7","type":"activite","name":"Parc national de Killarney","mapsLink":"https://www.google.com/maps/search/?api=1&query=Parc+national+de+Killarney+Ireland","image":"","description":"4,8★ (11 704 avis). Cascades, Ross Castle, sentiers.","duration":180,"link":{"kind":"step","stepId":"s2"},"indoor":false},{"id":"i8","type":"activite","name":"Péninsule de Dingle","mapsLink":"https://www.google.com/maps/search/?api=1&query=P%C3%A9ninsule+de+Dingle+Ireland","image":"","description":"Slea Head Drive en boucle : fort de Dunbeg, Ceann Sratha, plages, puis la ville de Dingle. Journée complète, route étroite en sens unique conseillé (sens horaire).","duration":240,"link":{"kind":"step","stepId":"s2"},"indoor":true},{"id":"i9","type":"activite","name":"Falaises de Moher","mapsLink":"https://www.google.com/maps/search/?api=1&query=Falaises+de+Moher+Ireland","image":"","description":"4,7★ (9 321 avis). Réserver le parking à l'avance en haute saison.","duration":120,"link":{"kind":"step","stepId":"s3"},"indoor":true},{"id":"i10","type":"activite","name":"Îles Skellig","mapsLink":"https://www.google.com/maps/search/?api=1&query=Skellig+Islands+Ireland","image":"","description":"4,8★ (41 avis). Sortie bateau — places très limitées et météo-dépendantes : à réserver au plus tôt si ce n'est pas déjà fait.","duration":300,"link":{"kind":"step","stepId":"s2"},"indoor":false},{"id":"i11","type":"activite","name":"The Dark Hedges","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Dark+Hedges+Ireland","image":"","description":"4,3★ (14 535 avis). Allée d'arbres emblématique.","duration":30,"link":{"kind":"step","stepId":"s6"},"indoor":false},{"id":"i12","type":"activite","name":"Pont de corde de Carrick-a-Rede","mapsLink":"https://www.google.com/maps/search/?api=1&query=Carrick-a-Rede+Rope+Bridge+Ireland","image":"","description":"⚠️ Créneau horaire à RÉSERVER obligatoirement, même pour les membres National Trust (vente close 1h avant). Famille 37,50-40 £. Accès : 1 km de gravier, pentes et escaliers — poussette impossible. Pont de 20 m au-dessus d'un à-pic de 30 m.","duration":60,"link":{"kind":"step","stepId":"s6"},"indoor":false},{"id":"i13","type":"activite","name":"Keshcorran Caves","mapsLink":"https://www.google.com/maps/search/?api=1&query=Keshcorran+Caves+Ireland","image":"","description":"4,7★ (891 avis). Grottes et point de vue, proche de Ballintogher.","duration":45,"link":{"kind":"step","stepId":"s5"},"indoor":false},{"id":"i14","type":"activite","name":"Chaussée des Géants","mapsLink":"https://www.google.com/maps/search/?api=1&query=Giant%27s+Causeway+Ireland","image":"","description":"4,7★ (28 946 avis). Créneau à réserver (fortement conseillé). Tarifs réduits sur les créneaux 9h-11h et 15h-17h ; créneaux tôt le matin = les plus calmes. Famille 37,50-40 £. Accès gratuit à pied possible par le Causeway Coast Way.","duration":120,"link":{"kind":"step","stepId":"s6"},"indoor":true},{"id":"i15","type":"activite","name":"Viewpoint Queen Maeve's Trail","mapsLink":"https://www.google.com/maps/search/?api=1&query=Queen+Maeve%27s+Trail+Knocknarea+Ireland","image":"","description":"4,9★ (39 avis). Sentier/point de vue, proche de Ballintogher.","duration":60,"link":{"kind":"step","stepId":"s5"},"indoor":false},{"id":"i16","type":"activite","name":"Killary Harbour","mapsLink":"https://www.google.com/maps/search/?api=1&query=Killary+Harbour+Ireland","image":"","description":"4,7★ (131 avis). Fjord, point de vue proche de Renvyle.","duration":30,"link":{"kind":"step","stepId":"s4"},"indoor":false},{"id":"i17","type":"activite","name":"Abbaye de Kylemore","mapsLink":"https://www.google.com/maps/search/?api=1&query=Kylemore+Abbey+Ireland","image":"","description":"4,6★ (17 950 avis). Abbaye et jardins victoriens, à côté de Renvyle.","duration":90,"link":{"kind":"step","stepId":"s4"},"indoor":true},{"id":"i18","type":"resto","name":"The Porterhouse Killarney","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Porterhouse+Killarney+Plunkett+Street+Ireland","image":"","description":"Gastropub au centre de Killarney, 4,5★ (~1 576 avis). Menu enfant jusqu'à 16 ans : saucisses-purée 9,50 €, ½ fish & chips 12,50 €. Plats adultes 18-28 €.","duration":0,"link":{"kind":"step","stepId":"s2"}},{"id":"i19","type":"resto","name":"The Laurels Pub & Restaurant","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Laurels+Pub+Main+Street+Killarney+Ireland","image":"","description":"Pub traditionnel très animé, 4,5★ (~2 533 avis). Cuisine irlandaise généreuse (stew, boxty, fish & chips), plats 17-21 €. Menu enfant confirmé par les avis.","duration":0,"link":{"kind":"step","stepId":"s2"}},{"id":"i20","type":"resto","name":"Salvadors & Robertinos","mapsLink":"https://www.google.com/maps/search/?api=1&query=Salvadors+Robertinos+High+Street+Killarney+Ireland","image":"","description":"Italien familial (pizzas au feu de bois, pâtes), 4,3★ (~1 295 avis). Ouvert 14h-21h30 tous les jours, bolognaise enfant. Valeur sûre, prix abordables.","duration":0,"link":{"kind":"step","stepId":"s2"}},{"id":"i21","type":"resto","name":"Kate Kearney's Cottage","mapsLink":"https://www.google.com/maps/search/?api=1&query=Kate+Kearney%27s+Cottage+Gap+of+Dunloe+Killarney+Ireland","image":"","description":"Cottage-pub à l'entrée du Gap of Dunloe, à ~10 km de Killarney. Portion junior du rôti du jour à 9,95 € (la plus équilibrée), plats adultes 18-27 €.","duration":0,"link":{"kind":"activite","itemId":"i7"}},{"id":"i22","type":"resto","name":"The Fish Box (Dingle)","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Fish+Box+Upper+Green+Street+Dingle+Ireland","image":"","description":"Poissonnerie-restaurant à Dingle, 4,7★ (~2 867 avis). Vrai menu enfant au poisson : goujons de poisson frais ou gambas 12,50 €, chowder 9 €. Plats 19-26 €.","duration":0,"link":{"kind":"activite","itemId":"i8"}},{"id":"i23","type":"resto","name":"The Market Bar & Restaurant","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Market+Bar+Merchants+Square+Ennis+Ireland","image":"","description":"LE meilleur menu enfant du coin : goujons de poulet ou saucisses AVEC purée et légumes 6,50 €. 4,5★ (~770 avis), plats 16-28 €. ⚠ Fermé le mardi.","duration":0,"link":{"kind":"step","stepId":"s3"}},{"id":"i24","type":"resto","name":"Town Hall Bistro","mapsLink":"https://www.google.com/maps/search/?api=1&query=Town+Hall+Bistro+Old+Ground+Hotel+O%27Connell+Street+Ennis+Ireland","image":"","description":"Bistrot d'hôtel dans un ancien hôtel de ville, 4,7★ (~371 avis). Menu enfant + demi-portions de la carte adulte. Ambiance calme et familiale.","duration":0,"link":{"kind":"step","stepId":"s3"}},{"id":"i25","type":"resto","name":"JP Clarke's Country Pub (Bunratty)","mapsLink":"https://www.google.com/maps/search/?api=1&query=JP+Clarke%27s+Country+Pub+Bunratty+Ireland","image":"","description":"À 2 pas du château de Bunratty, ouvert 7j/7 12h-21h. Menu enfant « JP Juniors » primé : moules 5,50 €, chowder 4,25 €, pâtes 6,30 €, sirloin 5oz 14,75 €.","duration":0,"link":{"kind":"activite","itemId":"i5"}},{"id":"i26","type":"resto","name":"McGann's Pub (Doolin)","mapsLink":"https://www.google.com/maps/search/?api=1&query=McGann%27s+Pub+Main+Street+Doolin+Ireland","image":"","description":"Pub emblématique de Doolin à 10 min des Falaises de Moher, 4,7★ (~4 217 avis). Musique trad le soir, plats 17-24 €. Pas de menu enfant publié.","duration":0,"link":{"kind":"activite","itemId":"i9"}},{"id":"i27","type":"resto","name":"Powers Thatch (Oughterard)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Powers+Thatch+Bar+Restaurant+Main+Street+Oughterard+Ireland","image":"","description":"Pause déjeuner idéale sur la N59 après Galway. Pub au toit de chaume, 4,8★ (~1 460 avis). Chowder réputé, chaises hautes, parking gratuit, cuisine 12h-20h30.","duration":0,"link":{"kind":"transit","fromStepId":"s3","toStepId":"s4"}},{"id":"i28","type":"resto","name":"Paddy Coyne's Public House","mapsLink":"https://www.google.com/maps/search/?api=1&query=Paddy+Coyne%27s+Public+House+Tullycross+Renvyle+Ireland","image":"","description":"Le plus proche de la base : vrai pub irlandais de 200 ans à Tullycross, 4,8★ (~570 avis). Poissons du jour excellents, prix abordables. Réserver, ça se remplit vite.","duration":0,"link":{"kind":"step","stepId":"s4"}},{"id":"i29","type":"resto","name":"Veldon's Seafarer (Letterfrack)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Veldon%27s+Seafarer+Bar+Restaurant+Letterfrack+Connemara+Ireland","image":"","description":"À 10 min de Renvyle sur la route de Kylemore, 4,6★ (~1 400 avis). Fruits de mer et plats irlandais, fish & chips 18,50 €, plats 16-25 €. Chaises hautes.","duration":0,"link":{"kind":"step","stepId":"s4"}},{"id":"i30","type":"resto","name":"Mitchell's Café - Kylemore Abbey","mapsLink":"https://www.google.com/maps/search/?api=1&query=Mitchell%27s+Cafe+Kylemore+Abbey+Connemara+Ireland","image":"","description":"Le repas sur place à l'abbaye (accès sans billet). Portions enfants à demi-tarif, bols bébé gratuits <4 ans, coin jeux. Soupes, quiches, ragoût irlandais, salades du potager.","duration":0,"link":{"kind":"activite","itemId":"i17"}},{"id":"i31","type":"resto","name":"Mannion's Bar (Clifden)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Mannion%27s+Bar+Restaurant+Market+Street+Clifden+Ireland","image":"","description":"Pub-resto au cœur de Clifden, 4,5★ (~1 130 avis). Agneau du Connemara et moules locales, plats 20-25 €. Menu enfant, chaises hautes ET table à langer.","duration":0,"link":{"kind":"step","stepId":"s4"}},{"id":"i32","type":"resto","name":"Sol Rio (Westport)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Sol+Rio+Restaurant+Bridge+Street+Westport+Ireland","image":"","description":"Arrêt déjeuner couvert sur la route du Connemara vers Sligo. Menu enfant primé « Kids Size Me », formule 2-3 plats 24-28 € avant 19h. ⚠ Fermé le mardi.","duration":0,"link":{"kind":"transit","fromStepId":"s4","toStepId":"s5"}},{"id":"i33","type":"resto","name":"Misunderstood Heron (Murrisk)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Misunderstood+Heron+Murrisk+Croagh+Patrick+Ireland","image":"","description":"Food truck primé face à la baie de Clew, au pied du Croagh Patrick, 4,6★ (~670 avis). Saumon, moules locales, ouvert 11h-17h. ⚠ Tout en extérieur, sans abri.","duration":0,"link":{"kind":"transit","fromStepId":"s4","toStepId":"s5"}},{"id":"i34","type":"resto","name":"The Venue (Strandhill)","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Venue+Bar+Restaurant+Strandhill+Sligo+Ireland","image":"","description":"Au pied de Knocknarea, parfait après le Queen Maeve's Trail. 4,6★ (~1 150 avis). Moules, crab claws, chowder maison. Menu enfant (cabillaud, saucisses-purée), 7j/7 dès 12h30.","duration":0,"link":{"kind":"activite","itemId":"i15"}},{"id":"i35","type":"resto","name":"Hooked (Sligo town)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Hooked+Rockwood+Parade+Sligo+Ireland","image":"","description":"Bistrot au bord de la Garavogue en centre-ville, 4,3★ (~1 975 avis). Produits locaux, carte enfants dédiée « Little Nippers », chaises hautes. Prix modérés.","duration":0,"link":{"kind":"step","stepId":"s5"}},{"id":"i36","type":"resto","name":"Shells Café (Strandhill)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Shells+Cafe+Shore+Road+Strandhill+Sligo+Ireland","image":"","description":"Café de plage très populaire, 4,6★ (~1 800 avis). Brunch, pain maison, poisson frais ; plats enfants dont un ragoût d'agneau. ⚠ 9h-18h : déjeuner seulement.","duration":0,"link":{"kind":"step","stepId":"s5"}},{"id":"i37","type":"resto","name":"The Fullerton Arms (Ballintoy)","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Fullerton+Arms+Main+Street+Ballintoy+Northern+Ireland","image":"","description":"À 5 min de Carrick-a-Rede et 10 min des Dark Hedges. Menu enfant dédié, chaises hautes, service continu 8h-21h. Chowder, moules, steak & ale pie, ~14-22 £ (16-25 €).","duration":0,"link":{"kind":"activite","itemId":"i12"}},{"id":"i38","type":"resto","name":"Little Wing Pizzeria (Belfast)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Little+Wing+Pizzeria+Ann+Street+Belfast","image":"","description":"Le meilleur rapport qualité-prix de Belfast : menu enfant 3 plats à 6,50 £ (~7,50 €) avec coloriages. Pizzas napolitaines 10-14 £. Centre-ville, 5 min de City Hall.","duration":0,"link":{"kind":"activite","itemId":"i4"}},{"id":"i39","type":"resto","name":"Market Square Bushmills","mapsLink":"https://www.google.com/maps/search/?api=1&query=Market+Square+Restaurant+Bushmills+Northern+Ireland","image":"","description":"Bistrot de village dans une halle de 1827, à 5 min de la Chaussée des Géants. 4,4★ (~462 avis). Produits locaux, ambiance décontractée, ~12-18 £ (14-21 €).","duration":0,"link":{"kind":"activite","itemId":"i14"}},{"id":"i40","type":"resto","name":"Harbour Bistro (Portrush)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Harbour+Bistro+The+Harbour+Portrush+Northern+Ireland","image":"","description":"Institution familiale de Portrush : grillades au feu de bois, portions généreuses, ~15-25 £. Menu enfant <12 ans boisson et accompagnement inclus. ⚠ Ouvre à 17h30, réserver.","duration":0,"link":{"kind":"step","stepId":"s6"}},{"id":"i41","type":"resto","name":"Millside Restaurant (Ballymena)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Millside+Restaurant+Gracehill+Ballymena+Northern+Ireland","image":"","description":"La meilleure note de Ballymena, 4,7★ (~1 056 avis), à 5 min de la base. Cuisine britannique moderne, grillades et pizzas. Menu enfant à confirmer par téléphone.","duration":0,"link":{"kind":"step","stepId":"s6"}},{"id":"i42","type":"resto","name":"Monasterboice Inn (près de Drogheda)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Monasterboice+Inn+Drogheda+Road+Monasterboice+Ireland","image":"","description":"Arrêt déjeuner sur la N1 juste avant Brú na Bóinne, le 17/08. Auberge familiale, 4,5★ (~2 184 avis), ouverte dès 9h. Cuisine traditionnelle copieuse, ~15-25 €.","duration":0,"link":{"kind":"activite","itemId":"i3"}},{"id":"i43","type":"resto","name":"Paris Texas Bar & Smokehouse","mapsLink":"https://www.google.com/maps/search/?api=1&query=Paris+Texas+High+Street+Kilkenny+Ireland","image":"","description":"LE meilleur menu enfant du voyage : 8,50 € (<10 ans) avec option carottes et purée maison au lieu des frites, boisson incluse. Offert avant 17h30 pour 2 plats adultes. Plats 18-35 €.","duration":0,"link":{"kind":"step","stepId":"s7"}},{"id":"i44","type":"resto","name":"Sullivan's Taproom","mapsLink":"https://www.google.com/maps/search/?api=1&query=Sullivan%27s+Taproom+John+Street+Kilkenny+Ireland","image":"","description":"Brasserie-taproom près du château, 4,6★ (~575 avis). Pizzas 12,50-17 €, burgers 16-18 €. Menu enfant dédié, cabanes chauffées en terrasse.","duration":0,"link":{"kind":"step","stepId":"s7"}},{"id":"i45","type":"resto","name":"The Fig Tree","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Fig+Tree+Restaurant+Kilkenny+Ireland","image":"","description":"Brunch et cuisine méditerranéenne servis toute la journée, 4,5★ (~1 159 avis). Cadre lumineux, petit-déjeuner à toute heure : très pratique avec des enfants. Prix doux.","duration":0,"link":{"kind":"step","stepId":"s7"}},{"id":"i46","type":"resto","name":"Aroi Asian Fusion","mapsLink":"https://www.google.com/maps/search/?api=1&query=Aroi+Asian+Fusion+Kilkenny+Ireland","image":"","description":"Cuisine asiatique (thaï, malaisienne, vietnamienne), 4,6★ (~1 367 avis). Formule déjeuner 14 € plat + gelato. Nouilles et riz faciles à partager, service rapide.","duration":0,"link":{"kind":"step","stepId":"s7"}},{"id":"i47","type":"resto","name":"Granny's Kitchen (Cashel)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Granny%27s+Kitchen+Rock+Lane+Cashel+Tipperary+Ireland","image":"","description":"Juste à côté du parking du Rock of Cashel, 4,7★ (~162 avis). Soupes, sandwiches et gâteaux maison 8-14 €, jardin extérieur. Ouvert 10h30-17h. Très bon marché.","duration":0,"link":{"kind":"activite","itemId":"i2"}},{"id":"i48","type":"resto","name":"The Moorings & Bridge Bar (Portmagee)","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Moorings+Bridge+Bar+Portmagee+Kerry+Ireland","image":"","description":"Au port d'embarquement pour les Skellig : fruits de mer, chowder, musique trad. L'arrêt évident avant ou après la sortie bateau. Réserver le soir en août.","duration":0,"link":{"kind":"activite","itemId":"i10"}},{"id":"i49","type":"resto","name":"Fisherman's Bar (Portmagee)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Fisherman%27s+Bar+Portmagee+Kerry+Ireland","image":"","description":"Deuxième option à Portmagee, face au quai. Pub de village, poisson du jour et plats simples. Pratique si Le Moorings est complet.","duration":0,"link":{"kind":"activite","itemId":"i10"}},{"id":"i50","type":"resto","name":"The Hedges Restaurant (Dark Hedges Estate)","mapsLink":"https://www.google.com/maps/search/?api=1&query=The+Hedges+Hotel+Restaurant+Ballymoney+Northern+Ireland","image":"","description":"Restaurant du Hedges Hotel, littéralement à côté de l'allée d'arbres. Carte britannique, cadre confortable — la seule vraie table à proximité immédiate.","duration":0,"link":{"kind":"activite","itemId":"i11"}},{"id":"i51","type":"resto","name":"Cross Keys / pubs de Leenane","mapsLink":"https://www.google.com/maps/search/?api=1&query=Leenane+village+Killary+Harbour+Connemara+Ireland","image":"","description":"Le village de Leenane, au fond du fjord, concentre les rares tables du secteur de Killary Harbour. ⚠ Le Blackberry Restaurant est signalé fermé : vérifier avant de s'y fier.","duration":0,"link":{"kind":"activite","itemId":"i16"}},{"id":"i52","type":"activite","name":"Cork (déjeuner d'arrivée)","mapsLink":"https://www.google.com/maps/search/?api=1&query=Cork+city+centre+Ireland","image":"","description":"Débarquement à Ringaskiddy 9h30 puis ~25 min jusqu'à Cork. English Market, St Patrick's Street. Bonne façon de couper les 1h20 de route restante jusqu'à Killarney.","duration":120,"link":{"kind":"transit","fromStepId":"s1","toStepId":"s2"},"indoor":true},{"id":"i53","type":"activite","name":"Dursey Island Cable Car","mapsLink":"https://www.google.com/maps/search/?api=1&query=Dursey+Island+Cable+Car+Beara+Cork+Ireland","image":"","description":"Seul téléphérique d'Irlande, péninsule de Beara. Ouvert (rouvert en 2023 après travaux), 9h30-19h30, fermé 13h-13h30. 10 € adulte / 5 € enfant / gratuit <3 ans. ⚠️ AUCUNE RÉSERVATION possible, 6 personnes par cabine : 1h à 3h d'attente en août, dans chaque sens. Et 3h de route aller-retour depuis Killarney. À arbitrer sérieusement avec des enfants.","duration":240,"link":{"kind":"step","stepId":"s2"},"indoor":false},{"id":"i54","type":"activite","name":"Fort de Dunbeg","mapsLink":"https://www.google.com/maps/search/?api=1&query=Dunbeg+Fort+Slea+Head+Dingle+Kerry+Ireland","image":"","description":"Fort promontoire de l'âge du fer sur la Slea Head Drive, avec centre de visite. Premier arrêt naturel de la boucle de Dingle.","duration":45,"link":{"kind":"activite","itemId":"i8"},"indoor":false},{"id":"i55","type":"activite","name":"Regency Walled Garden","mapsLink":"https://www.google.com/maps/search/?api=1&query=Regency+Walled+Garden+Clare+Ireland","image":"","description":"Jardin clos, arrêt tranquille sur la route Killarney → Ennis le 09/08. Environ 1h, de quoi couper 2h de voiture.","duration":60,"link":{"kind":"transit","fromStepId":"s2","toStepId":"s3"},"indoor":false},{"id":"i56","type":"activite","name":"Galway","mapsLink":"https://www.google.com/maps/search/?api=1&query=Galway+city+centre+Ireland","image":"","description":"Ville étudiante et animée sur la route Ennis → Connemara. Quartier latin, Spanish Arch. Bonne pause déjeuner le 11/08.","duration":90,"link":{"kind":"transit","fromStepId":"s3","toStepId":"s4"},"indoor":true},{"id":"i57","type":"activite","name":"Clifden","mapsLink":"https://www.google.com/maps/search/?api=1&query=Clifden+Galway+Connemara+Ireland","image":"","description":"Capitale du Connemara, à 30 min de Renvyle. Commerces, cafés, et point de départ du Sky Road (boucle panoramique de 16 km).","duration":90,"link":{"kind":"step","stepId":"s4"},"indoor":true}]}
+;
+
+// =====================================================================
+// State
+// =====================================================================
+const LS_DONE = "carnetDoneItems_v1";
+const LS_DAY  = "carnetLastDay_v1";
+const LS_LANG = "carnetLang_v1";
+
+let doneItems = new Set(JSON.parse(localStorage.getItem(LS_DONE) || "[]"));
+let lang = localStorage.getItem(LS_LANG) || "fr";
+let currentTab = "today";
+let indoorFilter = "all"; // all | indoor
+let restoFilterStepId = "all";
+
+function saveDone(){ localStorage.setItem(LS_DONE, JSON.stringify([...doneItems])); }
+function esc(s){ return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+// =====================================================================
+// Build the day-by-day itinerary from steps' arrival/departure ranges
+// =====================================================================
+function parseDate(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+function fmtISO(d){ return d.toISOString ? isoLocal(d) : d; }
+function isoLocal(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+const WEEKDAYS = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
+const MONTHS = ["jan.","fév.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+function fmtDayLabel(d){
+  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
+function buildDays(){
+  const steps = TRIP.steps;
+  if(!steps.length) return [];
+  const first = parseDate(steps[0].arrival);
+  const last = parseDate(steps[steps.length-1].departure);
+  const days = [];
+  for(let d = new Date(first); d <= last; d.setDate(d.getDate()+1)){
+    const iso = isoLocal(d);
+    let step = steps.find(s => iso >= s.arrival && iso < s.departure);
+    if(!step) step = steps[steps.length-1]; // dernier jour = departure du dernier step
+    const isArrival = iso === step.arrival;
+    const prevStep = (() => {
+      const idx = steps.indexOf(step);
+      return idx > 0 ? steps[idx-1] : null;
+    })();
+    const isTravelDay = isArrival && prevStep !== null;
+    days.push({
+      date: new Date(d), iso, step, isArrival, isTravelDay,
+      prevStep: isTravelDay ? prevStep : null
+    });
+  }
+  return days;
+}
+const DAYS = buildDays();
+
+function todayIndex(){
+  const now = isoLocal(new Date());
+  let idx = DAYS.findIndex(d => d.iso === now);
+  if(idx === -1){
+    if(DAYS.length && now < DAYS[0].iso) idx = 0;
+    else idx = DAYS.length - 1;
+  }
+  return idx;
+}
+
+let dayIdx = (() => {
+  const saved = localStorage.getItem(LS_DAY);
+  if(saved !== null){
+    const n = Number(saved);
+    if(n >= 0 && n < DAYS.length) return n;
+  }
+  return todayIndex();
+})();
+
+// =====================================================================
+// Helpers on TRIP data
+// =====================================================================
+function stepById(id){ return TRIP.steps.find(s=>s.id===id); }
+function itemById(id){ return TRIP.items.find(i=>i.id===id); }
+function itemsForStep(stepId){ return TRIP.items.filter(i=>i.link && i.link.kind==="step" && i.link.stepId===stepId); }
+function itemsForTransit(fromId,toId){ return TRIP.items.filter(i=>i.link && i.link.kind==="transit" && i.link.fromStepId===fromId && i.link.toStepId===toId); }
+function restosNearActivity(activityId){ return TRIP.items.filter(i=>i.link && i.link.kind==="activite" && i.link.itemId===activityId); }
+function isFerryStep(step){ return !step.hotel; }
+
+function durPill(min){
+  if(!min) return "";
+  let cls = "dur-s", label = min+" min";
+  if(min > 150){ cls="dur-l"; label="Journée complète (~"+Math.round(min/60)+"h)"; }
+  else if(min > 60){ cls="dur-m"; label="~"+Math.round(min/60*10)/10+"h"; }
+  else { label = min+" min"; }
+  return `<span class="pill ${cls}">⏱ ${label}</span>`;
+}
+function indoorPill(item){
+  if(item.type !== "activite" || item.indoor === undefined) return "";
+  return item.indoor ? `<span class="pill indoor">🏠 option abri</span>` : `<span class="pill outdoor">🌦️ plein air</span>`;
+}
+
+// =====================================================================
+// Rendering: header (day strip + nav)
+// =====================================================================
+function renderHeader(){
+  document.getElementById("tripTitle").textContent = TRIP.name || "Mon voyage";
+  const strip = document.getElementById("dayStrip");
+  const now = isoLocal(new Date());
+  strip.innerHTML = DAYS.map((d,i) => {
+    const cls = ["day-chip"];
+    if(i===dayIdx) cls.push("active");
+    if(d.iso===now) cls.push("today-marker");
+    return `<button class="${cls.join(" ")}" data-day="${i}"><span class="dnum">${d.date.getDate()}</span>J${i+1}</button>`;
+  }).join("");
+  const cur = DAYS[dayIdx];
+  document.getElementById("dayBig").textContent = cur ? `Jour ${dayIdx+1} — ${fmtDayLabel(cur.date)}` : "—";
+  document.getElementById("daySub").textContent = cur ? cur.step.name : "—";
+  document.getElementById("prevDay").disabled = dayIdx <= 0;
+  document.getElementById("nextDay").disabled = dayIdx >= DAYS.length-1;
+  document.getElementById("prevDay").style.opacity = dayIdx<=0 ? .3 : 1;
+  document.getElementById("nextDay").style.opacity = dayIdx>=DAYS.length-1 ? .3 : 1;
+  const activeChip = strip.querySelector(".day-chip.active");
+  if(activeChip) activeChip.scrollIntoView({inline:"center", block:"nearest"});
+}
+
+// =====================================================================
+// Bilingual labels for reservation modals
+// =====================================================================
+const L = {
+  fr: { hotel:"Hôtel", ref:"N° de réservation", checkin:"Arrivée", checkout:"Départ", address:"Adresse",
+        phone:"Téléphone", price:"Prix total", notes:"Notes", passengers:"Passagers", vehicle:"Véhicule",
+        crossing:"Traversée", departure:"Départ", arrival:"Arrivée", cabin:"Cabine", copy:"Copier", copied:"Copié ✓",
+        openMaps:"📍 Ouvrir dans Maps", showRes:"🏨 Voir la réservation", close:"Fermer" },
+  en: { hotel:"Hotel", ref:"Booking reference", checkin:"Check-in", checkout:"Check-out", address:"Address",
+        phone:"Phone", price:"Total price", notes:"Notes", passengers:"Passengers", vehicle:"Vehicle",
+        crossing:"Crossing", departure:"Departure", arrival:"Arrival", cabin:"Cabin", copy:"Copy", copied:"Copied ✓",
+        openMaps:"📍 Open in Maps", showRes:"🏨 Show booking", close:"Close" }
+};
+
+function copyToClipboard(text, btn){
+  const done = () => {
+    btn.textContent = (lang==="en"?L.en.copied:L.fr.copied);
+    btn.classList.add("copied");
+    setTimeout(()=>{ btn.textContent = (lang==="en"?L.en.copy:L.fr.copy); btn.classList.remove("copied"); }, 1600);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(done);
+  } else {
+    const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta);
+    ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); done();
+  }
+}
+
+function openModal(html){
+  document.getElementById("modalSheet").innerHTML = `<div class="m-close" data-close-modal></div>` + html;
+  document.getElementById("modalOverlay").classList.remove("hidden");
+  document.getElementById("modalSheet").querySelector("[data-close-modal]").addEventListener("click", closeModal);
+}
+function closeModal(){ document.getElementById("modalOverlay").classList.add("hidden"); }
+document.getElementById("modalOverlay").addEventListener("click", (e) => {
+  if(e.target.id === "modalOverlay") closeModal();
+});
+
+function hotelModal(step){
+  const h = step.hotel;
+  const t = L[lang];
+  openModal(`
+    <div class="lang-toggle">
+      <button data-lang="fr" class="${lang==='fr'?'active':''}">🇫🇷 Français</button>
+      <button data-lang="en" class="${lang==='en'?'active':''}">🇬🇧 English</button>
+    </div>
+    <h2>${esc(h.name)}</h2>
+    <div class="m-sub">${esc(t.hotel)} — ${esc(step.name)}</div>
+    <div class="card" style="margin:0;">
+      ${h.bookingRef ? `<div class="info-line"><span class="label">${t.ref}</span><span class="value">${esc(h.bookingRef)}</span></div>` : ""}
+      <div class="info-line"><span class="label">${t.checkin}</span><span class="value">${esc(h.checkIn)}</span></div>
+      <div class="info-line"><span class="label">${t.checkout}</span><span class="value">${esc(h.checkOut)}</span></div>
+      ${h.phone ? `<div class="info-line"><span class="label">${t.phone}</span><span class="value">${esc(h.phone)}</span></div>` : ""}
+      <div class="info-line"><span class="label">${t.price}</span><span class="value">${esc(h.price)}</span></div>
+      <div class="info-line"><span class="label">${t.address}</span><span class="value">${esc(h.address)}</span></div>
+    </div>
+    ${h.notes ? `<div class="item-desc" style="margin-top:8px;">${esc(h.notes)}</div>` : ""}
+    <div class="btn-row" style="margin-top:14px;">
+      <a class="big-btn" href="${esc(h.mapsLink)}" target="_blank" rel="noopener">${t.openMaps}</a>
+      <button class="big-btn ghost" id="copyRefBtn">${t.copy} n°</button>
+    </div>
+  `);
+  document.getElementById("copyRefBtn")?.addEventListener("click", (e) => copyToClipboard(h.bookingRef || "", e.target));
+  document.getElementById("modalSheet").querySelectorAll("[data-lang]").forEach(b => {
+    b.addEventListener("click", () => { lang = b.dataset.lang; localStorage.setItem(LS_LANG, lang); hotelModal(step); });
+  });
+}
+
+function ferryModal(step){
+  const t = L[lang];
+  openModal(`
+    <div class="lang-toggle">
+      <button data-lang="fr" class="${lang==='fr'?'active':''}">🇫🇷 Français</button>
+      <button data-lang="en" class="${lang==='en'?'active':''}">🇬🇧 English</button>
+    </div>
+    <h2>⛴️ ${esc(step.name)}</h2>
+    <div class="m-sub">${t.crossing} — Brittany Ferries</div>
+    <div class="card" style="margin:0;">
+      <div class="info-line"><span class="label">${t.departure}</span><span class="value">${esc(step.arrival)}</span></div>
+      <div class="info-line"><span class="label">${t.arrival}</span><span class="value">${esc(step.departure)}</span></div>
+    </div>
+    <div class="item-desc" style="margin-top:10px; white-space:pre-line;">${esc(step.notes)}</div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="big-btn ghost" id="copyRefBtn2">${t.copy} réf.</button>
+    </div>
+  `);
+  const refMatch = (step.notes.match(/UM\w+/) || [""])[0];
+  document.getElementById("copyRefBtn2")?.addEventListener("click", (e) => copyToClipboard(refMatch, e.target));
+  document.getElementById("modalSheet").querySelectorAll("[data-lang]").forEach(b => {
+    b.addEventListener("click", () => { lang = b.dataset.lang; localStorage.setItem(LS_LANG, lang); ferryModal(step); });
+  });
+}
+
+// =====================================================================
+// Item card renderer (activity or resto), with optional nested restos
+// =====================================================================
+function renderItemCard(item, opts){
+  opts = opts || {};
+  const isDone = doneItems.has(item.id);
+  const nested = item.type === "activite" ? restosNearActivity(item.id) : [];
+  return `
+  <div class="item-card ${isDone ? 'done':''}" data-item="${item.id}">
+    <div class="item-top">
+      <div class="item-name ${isDone?'strike':''}">${item.type==="resto"?"🍽️ ":"📍 "}${esc(item.name)}</div>
+    </div>
+    <div class="item-badges">
+      ${item.type==="activite" ? durPill(item.duration) : `<span class="pill resto">Restaurant</span>`}
+      ${indoorPill(item)}
+    </div>
+    ${item.description ? `<div class="item-desc">${esc(item.description)}</div>` : ""}
+    <div class="item-actions">
+      ${item.mapsLink ? `<a href="${esc(item.mapsLink)}" target="_blank" rel="noopener">📍 Maps</a>` : ""}
+      <button class="check-btn ${isDone?'on':''}" data-toggle-done="${item.id}">${isDone? "✓ Fait" : "Marquer fait"}</button>
+    </div>
+    ${nested.length ? `
+      <div class="nearby-wrap">
+        <div class="nearby-head">🍽️ Où manger sur place</div>
+        ${nested.map(r => `
+          <div class="nearby-item">
+            <div class="n-name">${esc(r.name)}</div>
+            ${r.description ? `<div class="n-desc">${esc(r.description)}</div>` : ""}
+            ${r.mapsLink ? `<a href="${esc(r.mapsLink)}" target="_blank" rel="noopener">📍 Voir sur Maps ↗</a>` : ""}
+          </div>
+        `).join("")}
+      </div>
+    ` : ""}
+  </div>`;
+}
+
+function bindItemCardEvents(root){
+  root.querySelectorAll("[data-toggle-done]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.toggleDone;
+      if(doneItems.has(id)) doneItems.delete(id); else doneItems.add(id);
+      saveDone();
+      renderView();
+    });
+  });
+}
+
+// =====================================================================
+// TAB: Aujourd'hui
+// =====================================================================
+function renderToday(){
+  const day = DAYS[dayIdx];
+  if(!day) return `<div class="empty-note">Aucune étape définie.</div>`;
+  const step = day.step;
+  let html = "";
+
+  // Jour de trajet (ferry ou route longue)
+  if(day.isTravelDay){
+    const from = day.prevStep;
+    const transitItems = itemsForTransit(from.id, step.id);
+    html += `<div class="card hero">
+      <h3>🚗 Trajet du jour</h3>
+      <div style="font-size:15px; font-weight:700; margin-bottom:4px;">${esc(from.name)} → ${esc(step.name)}</div>
+      <div class="item-desc">Journée de route : reste large sur les horaires avec les enfants, prévois des pauses.</div>
+    </div>`;
+    if(transitItems.length){
+      html += `<div class="card"><h3>🛣️ Étapes possibles en chemin</h3>`;
+      transitItems.forEach(it => html += renderItemCard(it));
+      html += `</div>`;
+    }
+  }
+
+  // Ferry
+  if(isFerryStep(step)){
+    html += `<div class="card hero ferry">
+      <h3>⛴️ ${esc(step.name)}</h3>
+      <div class="item-desc">${esc((step.notes||"").split(". ").slice(0,2).join(". "))}.</div>
+      <button class="big-btn blue" data-open-ferry="${step.id}">🎫 Voir la réservation (réf, cabine, passagers)</button>
+    </div>`;
+  }
+
+  // Hôtel
+  if(step.hotel){
+    html += `<div class="card hero">
+      <h3>🏨 Logement</h3>
+      <div style="font-size:16px; font-weight:800; margin-bottom:8px;">${esc(step.hotel.name)}</div>
+      <div class="btn-row">
+        <a class="big-btn" href="${esc(step.hotel.mapsLink)}" target="_blank" rel="noopener">📍 Y aller</a>
+        <button class="big-btn blue" data-open-hotel="${step.id}">🏨 Réservation</button>
+      </div>
+    </div>`;
+  }
+
+  // Activités du séjour (toutes celles liées à l'étape, jour après jour on coche)
+  const acts = itemsForStep(step.id).filter(i=>i.type==="activite");
+  if(acts.length){
+    const filtered = indoorFilter === "indoor" ? acts.filter(a=>a.indoor) : acts;
+    html += `<div class="card">
+      <h3>🎯 Activités possibles ici</h3>
+      <div class="section-toggle">
+        <button data-indoor-filter="all" class="${indoorFilter==='all'?'active':''}">Toutes (${acts.length})</button>
+        <button data-indoor-filter="indoor" class="${indoorFilter==='indoor'?'active':''}">🌧️ Si mauvais temps (${acts.filter(a=>a.indoor).length})</button>
+      </div>
+      ${filtered.length ? filtered.map(it=>renderItemCard(it)).join("") : `<div class="empty-note">Rien avec option abri ici — vérifie la météo avant de partir.</div>`}
+    </div>`;
+  }
+
+  // Restos du soir (liés à l'étape, hors ceux "sur place" nichés)
+  const restos = itemsForStep(step.id).filter(i=>i.type==="resto");
+  html += `<div class="card">
+    <h3>🍽️ Où manger ce soir</h3>
+    ${restos.length ? restos.map(r=>renderItemCard(r)).join("") : `<div class="empty-note">Aucune adresse enregistrée ici pour l'instant.</div>`}
+    <a class="big-btn ghost" style="margin-top:4px;" href="${esc(supermarketMapsLink(step))}" target="_blank" rel="noopener">🛒 Trouver un supermarché à proximité</a>
+  </div>`;
+
+  return html;
+}
+
+function supermarketMapsLink(step){
+  const isNI = /Antrim|Northern Ireland|Belfast/i.test(step.name) || (step.hotel && /Northern Ireland/i.test(step.hotel.address||""));
+  const q = isNI ? "supermarket" : "supermarché";
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+
+// =====================================================================
+// TAB: Planning (vue d'ensemble)
+// =====================================================================
+function renderPlanning(){
+  const now = isoLocal(new Date());
+  let html = `<div class="empty-note" style="text-align:left; padding:2px 2px 12px;">Vue d'ensemble du voyage — touche une étape ou un jour pour t'y rendre.</div>`;
+  TRIP.steps.forEach(step => {
+    const stepDays = DAYS.map((d,i)=>({...d,i})).filter(d=>d.step.id===step.id);
+    const isCurrent = stepDays.some(d=>d.i===dayIdx);
+    html += `<div class="step-block ${isCurrent?'current':''}" data-jump-step="${step.id}">
+      <div class="st-top">
+        <div class="st-name">${isFerryStep(step)?"⛴️ ":"🏨 "}${esc(step.name)}</div>
+        <div class="st-dates">${esc(step.arrival)} → ${esc(step.departure)}</div>
+      </div>
+      ${step.hotel ? `<div class="st-meta">${esc(step.hotel.name)} · ${esc(step.hotel.price)}</div>` : ""}
+      <div class="st-days">
+        ${stepDays.map(d => `<span class="${d.iso===now?'today':''} ${d.i===dayIdx?'today':''}" data-day="${d.i}">J${d.i+1} · ${d.date.getDate()}</span>`).join("")}
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+// =====================================================================
+// TAB: Restos (liste complète filtrable)
+// =====================================================================
+function renderRestos(){
+  const restos = TRIP.items.filter(i=>i.type==="resto");
+  let html = `<div class="resto-filter">
+    <button data-resto-filter="all" class="${restoFilterStepId==='all'?'active':''}">Tous (${restos.length})</button>
+    ${TRIP.steps.map(s=>{
+      const count = restos.filter(r => linkedToStep(r, s.id)).length;
+      if(!count) return "";
+      return `<button data-resto-filter="${s.id}" class="${restoFilterStepId===s.id?'active':''}">${esc(shortName(s.name))} (${count})</button>`;
+    }).join("")}
+  </div>`;
+  const list = restoFilterStepId === "all" ? restos : restos.filter(r => linkedToStep(r, restoFilterStepId));
+  html += list.length ? list.map(r=>renderItemCard(r)).join("") : `<div class="empty-note">Aucun resto pour ce filtre.</div>`;
+  return html;
+}
+function shortName(name){ return name.split(" (")[0].split(" -")[0].split(" –")[0]; }
+function linkedToStep(item, stepId){
+  if(!item.link) return false;
+  if(item.link.kind==="step") return item.link.stepId===stepId;
+  if(item.link.kind==="transit") return item.link.fromStepId===stepId || item.link.toStepId===stepId;
+  if(item.link.kind==="activite"){
+    const act = itemById(item.link.itemId);
+    return act && linkedToStep(act, stepId);
+  }
+  return false;
+}
+
+// =====================================================================
+// Master render
+// =====================================================================
+function renderView(){
+  const view = document.getElementById("view");
+  if(currentTab === "today") view.innerHTML = renderToday();
+  else if(currentTab === "planning") view.innerHTML = renderPlanning();
+  else if(currentTab === "restos") view.innerHTML = renderRestos();
+  bindItemCardEvents(view);
+  bindViewEvents(view);
+  renderHeader();
+  localStorage.setItem(LS_DAY, String(dayIdx));
+}
+
+function bindViewEvents(view){
+  view.querySelectorAll("[data-open-hotel]").forEach(b => b.addEventListener("click", () => hotelModal(stepById(b.dataset.openHotel))));
+  view.querySelectorAll("[data-open-ferry]").forEach(b => b.addEventListener("click", () => ferryModal(stepById(b.dataset.openFerry))));
+  view.querySelectorAll("[data-indoor-filter]").forEach(b => b.addEventListener("click", () => { indoorFilter = b.dataset.indoorFilter; renderView(); }));
+  view.querySelectorAll("[data-resto-filter]").forEach(b => b.addEventListener("click", () => { restoFilterStepId = b.dataset.restoFilter; renderView(); }));
+  view.querySelectorAll("[data-jump-step]").forEach(b => b.addEventListener("click", (e) => {
+    if(e.target.closest("[data-day]")) return;
+    const stepId = b.dataset.jumpStep;
+    const idx = DAYS.findIndex(d=>d.step.id===stepId);
+    if(idx>=0){ dayIdx = idx; goTab("today"); }
+  }));
+  view.querySelectorAll("[data-day]").forEach(b => b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dayIdx = Number(b.dataset.day);
+    goTab("today");
+  }));
+}
+
+function goTab(tab, push){
+  currentTab = tab;
+  document.querySelectorAll("nav.tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab===tab));
+  renderView();
+  document.getElementById("view").scrollTop = 0;
+  if(push !== false) history.pushState({tab, dayIdx}, "", "#"+tab);
+}
+
+document.querySelectorAll("nav.tabbar button").forEach(b => b.addEventListener("click", () => goTab(b.dataset.tab)));
+document.getElementById("dayStrip").addEventListener("click", (e) => {
+  const chip = e.target.closest("[data-day]");
+  if(chip){ dayIdx = Number(chip.dataset.day); renderView(); }
+});
+document.getElementById("prevDay").addEventListener("click", () => { if(dayIdx>0){ dayIdx--; renderView(); } });
+document.getElementById("nextDay").addEventListener("click", () => { if(dayIdx<DAYS.length-1){ dayIdx++; renderView(); } });
+
+window.addEventListener("popstate", (e) => {
+  if(e.state){ currentTab = e.state.tab; dayIdx = e.state.dayIdx; }
+  else { currentTab = "today"; }
+  document.querySelectorAll("nav.tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab===currentTab));
+  renderView();
+});
+
+// Swipe left/right on main to change day (only on "today" tab)
+(function(){
+  let sx=0, sy=0, tracking=false;
+  const main = document.getElementById("view");
+  main.addEventListener("touchstart", (e) => {
+    if(currentTab!=="today") return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; tracking = true;
+  }, {passive:true});
+  main.addEventListener("touchend", (e) => {
+    if(!tracking) return; tracking = false;
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)*1.5){
+      if(dx < 0 && dayIdx < DAYS.length-1){ dayIdx++; renderView(); }
+      else if(dx > 0 && dayIdx > 0){ dayIdx--; renderView(); }
+    }
+  }, {passive:true});
+})();
+
+// Init
+history.replaceState({tab:"today", dayIdx}, "", "#today");
+renderView();
+
+// Service worker
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
