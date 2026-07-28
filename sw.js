@@ -1,4 +1,4 @@
-const CACHE_NAME = "carnet-irlande-v1";
+const CACHE_NAME = "carnet-irlande-v2";
 const ASSETS = ["./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable.png"];
 
 self.addEventListener("install", (e) => {
