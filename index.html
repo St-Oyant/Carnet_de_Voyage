@@ -357,7 +357,7 @@ function badgesFor(it){
 }
 
 /* ============================ CARTE ======================================= */
-var COL = {step:'#4f8cff', activite:'#3ddc84', resto:'#ffb84d', ferry:'#7fb0ff', shop:'#c78cff'};
+var COL = {step:'#4f8cff', activite:'#3ddc84', resto:'#ffb84d', ferry:'#7fb0ff', shop:'#c78cff', commodite:'#4fd6c4'};
 var MUTED = '#3a4152';
 var lon2tx = function(lon,z){ return (lon+180)/360*Math.pow(2,z); };
 var lat2ty = function(lat,z){ var r = Math.max(-85, Math.min(85, lat))*Math.PI/180;
@@ -862,60 +862,73 @@ function ferryFullCard(fs){
     + '<button class="big-btn ghost" data-ferry="' + esc(fs.id) + '">🎟 Fiche traversée</button></div>';
 }
 
-/* --- 5. l'hôtel du soir --------------------------------------------------- */
-function hotelBlock(c){
-  // Jour de pure traversée : la carte "La traversée" est déjà en tête de
-  // page, pas besoin de la répéter ici.
-  if(c.kind === 'ferry') return '';
-  var s = c.sleep;
-  if(!s) return '<div class="card"><h3>🏠 Ce soir</h3><div class="empty">Nuit à bord ou retour à la maison.</div></div>';
-  if(isFerryStep(s)) return ferryFullCard(s);
-  var h = s.hotel; if(!h) return '';
-  var nav = navLink({mapsLink:h.mapsLink, address:h.address, coord:s.coord});
-  var map = hasCoord(s) ? mapSlot({points:[{lat:s.coord.lat, lng:s.coord.lng, kind:'step', label:h.name, id:'step:'+s.id}],
-                                   maxZoom:15, padding:120, href:nav}, 'small') : '';
-  var flags = [];
-  if(h.arrivalWindow) flags.push(pill('time', '🔑 ' + h.arrivalWindow));
-  if(h.breakfast) flags.push(pill(/non/i.test(h.breakfast) ? 'out' : 'in', '🥐 ' + (/non/i.test(h.breakfast) ? 'pas de petit-déj' : 'petit-déj inclus')));
-  if(h.foodOnSite) flags.push(pill('in', '🍽️ dîner sur place'));
-  if(h.selfCatering) flags.push(pill('out', '🍳 cuisine — courses à prévoir'));
-  return '<div class="card"><h3>🏠 Ce soir</h3>'
-    + '<div class="hotel"><div class="nm">' + esc(h.name) + '</div>'
-    + (h.address ? '<div class="ad">' + esc(h.address) + '</div>' : '')
-    + (flags.length ? '<div class="flags">' + flags.join('') + '</div>' : '') + '</div>'
-    + (map ? '<div style="height:10px"></div>' + map : '')
-    + '<div style="height:10px"></div>'
-    + (nav ? '<a class="big-btn blue" href="' + esc(nav) + '" target="_blank" rel="noopener">🧭 Aller à l\'hôtel</a>' : '')
-    + '<button class="big-btn ghost" data-hotel="' + esc(s.id) + '">🎟 Fiche &amp; réservation</button>'
-    + '</div>';
-}
+/* --- 5+6. fin de journée : logement, où manger, courses, laverie --------- */
+// Un seul bloc plutôt que deux (règle du 30 juillet) : la carte réunit le
+// logement et tout ce qui gravite autour, puis chaque section n'apparaît que
+// si elle a quelque chose à montrer.
+function commoditesOfStep(id){ return itemsOfStep(id).filter(function(i){ return i.type === 'commodite'; }); }
 
-/* --- 6. ressources de l'étape --------------------------------------------- */
 function resRow(it, icon){
   var sub = it.type === 'resto'
     ? [it.cuisine, it.priceAdult].filter(Boolean).join(' · ')
-    : (it.description || '').slice(0, 70);
+    : (it.type === 'commodite' && it.category ? it.category : (it.description || '').slice(0, 70));
   return '<button class="res" data-detail="' + esc(it.id) + '">'
     + '<span class="ic">' + icon + '</span><span class="bd"><span class="nm">' + esc(it.name) + '</span>'
     + (sub ? '<div class="tl-n">' + esc(sub) + '</div>' : '')
     + badgesFor(it) + '</span><span class="go">›</span></button>';
 }
-function resBlock(c, plan){
+
+function finDeJourneeBlock(c, plan){
+  // Jour de pure traversée : la carte "La traversée" est déjà en tête de
+  // page, pas besoin de la répéter ici.
+  if(c.kind === 'ferry') return '';
   var s = c.sleep;
-  if(!s || isFerryStep(s)) return '';
-  var restos = restosOfStep(s.id), shops = shopsOfStep(s.id);
+  if(!s) return '<div class="card"><h3>🌙 Fin de journée</h3><div class="empty">Nuit à bord ou retour à la maison.</div></div>';
+  if(isFerryStep(s)) return ferryFullCard(s);
+
+  var h = s.hotel;
+  var restos = restosOfStep(s.id), shops = shopsOfStep(s.id), commodites = commoditesOfStep(s.id);
+  if(!h && !restos.length && !shops.length && !commodites.length) return '';
+  var laveries = commodites.filter(function(i){ return /laverie/i.test(i.category || ''); });
+  var autres = commodites.filter(function(i){ return !/laverie/i.test(i.category || ''); });
   var retained = (plan && plan.dinnerOptions) || [];
   restos.sort(function(a,b){ return (retained.indexOf(b.id) >= 0) - (retained.indexOf(a.id) >= 0); });
-  var h = s.hotel || {};
-  var html = '<div class="card"><h3>🍽️ En fin de journée, à ' + esc(shortName(s.name)) + '</h3>';
-  if(h.foodOnSite) html += '<div class="warnbox" style="margin-top:0">🍽️ L\'hébergement sert à dîner sur place — les adresses ci-dessous sont un plan B.</div>';
-  if(h.selfCatering) html += '<div class="warnbox" style="margin-top:0">🍳 Cuisine dans le logement et aucun petit-déjeuner fourni : penser aux courses.</div>';
-  html += '<div class="sub-h">Où dîner</div>';
-  html += restos.length ? restos.map(function(r){ return resRow(r, '🍽️'); }).join('')
-                        : '<div class="empty">Aucune adresse enregistrée pour cette étape.</div>';
-  if(shops.length){
-    html += '<div class="sub-h">Courses</div>' + shops.map(function(r){ return resRow(r, '🛒'); }).join('');
+
+  // Carte : le logement, plus resto / courses / laverie qui ont leurs propres
+  // coordonnées — une laverie sans coordonnées propres est censée être sur
+  // place, donc déjà couverte par le point du logement.
+  var pts = [];
+  if(hasCoord(s)) pts.push({lat:s.coord.lat, lng:s.coord.lng, kind:isFerryStep(s) ? 'ferry' : 'step', label:(h && h.name) || shortName(s.name), id:'step:'+s.id});
+  restos.forEach(function(r){ if(hasCoord(r)) pts.push({lat:r.coord.lat, lng:r.coord.lng, approx:r.coord.approx, kind:'resto', label:r.name, id:'item:'+r.id}); });
+  shops.forEach(function(r){ if(hasCoord(r)) pts.push({lat:r.coord.lat, lng:r.coord.lng, approx:r.coord.approx, kind:'shop', label:r.name, id:'item:'+r.id}); });
+  commodites.forEach(function(r){ if(hasCoord(r)) pts.push({lat:r.coord.lat, lng:r.coord.lng, approx:r.coord.approx, kind:'commodite', label:r.name, id:'item:'+r.id}); });
+  var nav = h ? navLink({mapsLink:h.mapsLink, address:h.address, coord:s.coord}) : '';
+  var map = pts.length ? mapSlot({points:pts, maxZoom:14, padding:80, href:nav}, 'small') : '';
+
+  var html = '<div class="card"><h3>🌙 Fin de journée, à ' + esc(shortName(s.name)) + '</h3>' + map;
+
+  if(h){
+    var flags = [];
+    if(h.arrivalWindow) flags.push(pill('time', '🔑 ' + h.arrivalWindow));
+    if(h.breakfast) flags.push(pill(/non/i.test(h.breakfast) ? 'out' : 'in', '🥐 ' + (/non/i.test(h.breakfast) ? 'pas de petit-déj' : 'petit-déj inclus')));
+    if(h.foodOnSite) flags.push(pill('in', '🍽️ dîner sur place'));
+    if(h.selfCatering) flags.push(pill('out', '🍳 cuisine — courses à prévoir'));
+    html += (map ? '<div style="height:10px"></div>' : '')
+      + '<div class="hotel"><div class="nm">' + esc(h.name) + '</div>'
+      + (h.address ? '<div class="ad">' + esc(h.address) + '</div>' : '')
+      + (flags.length ? '<div class="flags">' + flags.join('') + '</div>' : '') + '</div>'
+      + '<div style="height:10px"></div>'
+      + (nav ? '<a class="big-btn blue" href="' + esc(nav) + '" target="_blank" rel="noopener">🧭 Aller à l\'hôtel</a>' : '')
+      + '<button class="big-btn ghost" data-hotel="' + esc(s.id) + '">🎟 Fiche &amp; réservation</button>';
+    if(h.foodOnSite) html += '<div class="warnbox">🍽️ L\'hébergement sert à dîner sur place — les adresses ci-dessous sont un plan B.</div>';
+    if(h.selfCatering) html += '<div class="warnbox">🍳 Cuisine dans le logement et aucun petit-déjeuner fourni : penser aux courses.</div>';
   }
+
+  if(restos.length) html += '<div class="sub-h">Où manger</div>' + restos.map(function(r){ return resRow(r, '🍽️'); }).join('');
+  if(shops.length) html += '<div class="sub-h">Où faire ses courses</div>' + shops.map(function(r){ return resRow(r, '🛒'); }).join('');
+  if(laveries.length) html += '<div class="sub-h">Où laver le linge</div>' + laveries.map(function(r){ return resRow(r, '🧺'); }).join('');
+  if(autres.length) html += '<div class="sub-h">Autres commodités</div>' + autres.map(function(r){ return resRow(r, '🧰'); }).join('');
+
   return html + '</div>';
 }
 
@@ -946,8 +959,7 @@ function renderDay(){
     }
   }
 
-  html += hotelBlock(c);
-  html += resBlock(c, f.plan);
+  html += finDeJourneeBlock(c, f.plan);
   document.getElementById('view').innerHTML = html;
   mountMaps();
 }
