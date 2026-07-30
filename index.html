@@ -81,7 +81,7 @@
 
   /* Carte maison : tuiles OSM + calque SVG */
   .map{position:relative; overflow:hidden; border-radius:12px; border:1px solid var(--border); background:#111726; touch-action:pan-y; user-select:none;}
-  .map.jour{height:230px;} .map.small{height:132px;}
+  .map.jour{height:230px;} .map.small{height:132px;} .map.big{height:320px;}
   .map .tiles{position:absolute; inset:0;}
   .map .tiles img{position:absolute; width:256px; height:256px; border:0; display:block; filter:grayscale(.35) brightness(.7) contrast(1.08);}
   .map svg{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
@@ -105,6 +105,7 @@
   .tl-line i{position:absolute; left:0; top:5px; width:12px; height:12px; border-radius:50%; background:var(--accent); border:2px solid var(--bg);}
   .tl-line i.repas{background:var(--resto);} .tl-line i.bout{background:var(--muted);} .tl-line i.act{background:var(--accent);}
   .tl-body{flex:1; min-width:0; padding-bottom:16px;}
+  .tl-seg{font-size:11px; color:var(--muted); margin-bottom:3px; display:flex; align-items:center; gap:4px;}
   .tl-t{font-size:15.5px; font-weight:700; line-height:1.25;}
   .tl-n{font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.4;}
   .tl-body .badges{margin-top:6px;}
@@ -357,9 +358,21 @@ function badgesFor(it){
 
 /* ============================ CARTE ======================================= */
 var COL = {step:'#4f8cff', activite:'#3ddc84', resto:'#ffb84d', ferry:'#7fb0ff', shop:'#c78cff'};
+var MUTED = '#3a4152';
 var lon2tx = function(lon,z){ return (lon+180)/360*Math.pow(2,z); };
 var lat2ty = function(lat,z){ var r = Math.max(-85, Math.min(85, lat))*Math.PI/180;
   return (1 - Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Math.pow(2,z); };
+
+// Haversine à vol d'oiseau, majoré de 30 % pour approcher la route réelle, à
+// 60 km/h (donc 1 km ≈ 1 min), arrondi à 5 minutes — mêmes règles que le
+// builder, pour que les temps affichés dans le carnet lui correspondent.
+function haversineKm(a, b){
+  var R = 6371, dLat = (b.lat-a.lat)*Math.PI/180, dLng = (b.lng-a.lng)*Math.PI/180;
+  var s = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+function roadKm(a, b){ return haversineKm(a, b) * 1.3; }
+function travelMin(km){ return Math.max(5, Math.round(km / 5) * 5); }
 
 var mapCfgs = {}, mapSeq = 0, mapObs = null;
 
@@ -428,11 +441,17 @@ function drawMap(el){
     });
 
     var s = '';
-    if(cfg.path && cfg.path.length > 1){
-      var pp = cfg.path.map(function(p){ var q = px(p); return q.x.toFixed(1) + ',' + q.y.toFixed(1); }).join(' ');
-      s += '<polyline points="' + pp + '" fill="none" stroke="' + COL.step + '" stroke-width="2.5" '
-         + 'stroke-opacity=".8" stroke-dasharray="7 5" stroke-linejoin="round"/>';
-    }
+    // Une carte peut porter plusieurs tracés (vue Planning : le tour d'ensemble
+    // en grisé, la journée active en couleur par-dessus) ; cfg.path reste le
+    // raccourci pour un tracé unique.
+    var paths = cfg.paths || (cfg.path ? [{points:cfg.path, color:COL.step, width:2.5, dash:'7 5', opacity:.8}] : []);
+    paths.forEach(function(pl){
+      if(!pl || !pl.points || pl.points.length < 2) return;
+      var pp = pl.points.map(function(p){ var q = px(p); return q.x.toFixed(1) + ',' + q.y.toFixed(1); }).join(' ');
+      s += '<polyline points="' + pp + '" fill="none" stroke="' + (pl.color || COL.step) + '" '
+         + 'stroke-width="' + (pl.width || 2.5) + '" stroke-opacity="' + (pl.opacity == null ? .8 : pl.opacity) + '"'
+         + (pl.dash ? ' stroke-dasharray="' + pl.dash + '"' : '') + ' stroke-linejoin="round"/>';
+    });
     // Les points d'étape passent en dernier : ils portent le repère de couchage
     // et ne doivent pas disparaître sous une pastille de restaurant voisine.
     var ordered = cfg.points.slice().sort(function(a,b){
@@ -442,9 +461,11 @@ function drawMap(el){
     ordered.forEach(function(p){
       var q = px(p);
       if(q.x < -40 || q.y < -40 || q.x > w+40 || q.y > h+40) return;
-      var c = COL[p.kind] || COL.activite;
+      // Vue Planning : les points hors du jour actif sont grisés plutôt que
+      // retirés, pour garder le tour d'ensemble lisible en fond.
+      var c = p.muted ? MUTED : (COL[p.kind] || COL.activite);
       var r = (p.kind === 'step' || p.kind === 'ferry' || p.num) ? 12 : 8;
-      s += '<g class="hit" data-pick="' + esc(p.id || '') + '">'
+      s += '<g class="hit" data-pick="' + esc(p.id || '') + '" opacity="' + (p.muted ? '.55' : '1') + '">'
          + '<circle cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + r + '" fill="' + c + '" '
          + 'stroke="#0d1220" stroke-width="2"' + (p.approx ? ' stroke-dasharray="3 2"' : '') + '>'
          + '<title>' + esc(p.label || '') + '</title></circle>'
@@ -744,12 +765,19 @@ function planPoints(plan, c){
   return {points:pts, path:path};
 }
 
-function entryRow(e, isFirst, isLast){
+// Distance/temps de route depuis l'arrêt précédent, même calcul que le
+// builder ("🚗 50 min · ~51 km depuis l'arrêt précédent") — demandé par
+// Antoine pour retrouver ce repère dans le carnet.
+function segHtml(min, km){
+  return '<div class="tl-seg">🚗 ' + esc(durTxt(min)) + ' · ~' + Math.round(km) + ' km depuis l\'arrêt précédent</div>';
+}
+
+function entryRow(e, isFirst, isLast, seg){
   var it = e.itemId && item(e.itemId);
   var kind = e.kind || (it ? 'activite' : 'libre');
   var dot = kind === 'repas' ? 'repas' : ((kind === 'depart' || kind === 'retour') ? 'bout' : 'act');
   var title = e.label || (it ? it.name : (kind === 'repas' ? 'Repas' : 'Temps libre'));
-  var body = '<div class="tl-t">' + esc(title) + '</div>';
+  var body = (seg || '') + '<div class="tl-t">' + esc(title) + '</div>';
   if(it && e.label && e.label !== it.name) body += '<div class="tl-n">' + esc(it.name) + '</div>';
   if(e.note) body += '<div class="tl-n">' + esc(e.note) + '</div>';
   if(it) body += badgesFor(it);
@@ -785,6 +813,24 @@ function planBlock(plan, c, several){
   var href = loopLink(plan, pp.path);
   var map = mapSlot({points:pp.points, path:pp.path, href:href}, 'jour');
   var ents = plan.entries || [];
+  // Segments de route entre arrêts, calculés dans l'ordre du déroulé : chaque
+  // ligne "Départ"/"activité"/"Retour" porte les coordonnées de son point,
+  // et on affiche le trajet depuis le point précédent quand les deux sont connus.
+  var start = c.kind === 'transit' ? c.from : c.step;
+  var end = c.kind === 'transit' ? c.to : c.step;
+  var prevCoord = hasCoord(start) ? start.coord : null;
+  var rowsHtml = ents.map(function(e, i){
+    var coord = null;
+    if(e.kind === 'retour') coord = hasCoord(end) ? end.coord : null;
+    else if(e.itemId){ var it = item(e.itemId); if(hasCoord(it)) coord = it.coord; }
+    var seg = '';
+    if(i > 0 && prevCoord && coord){
+      var km = roadKm(prevCoord, coord);
+      seg = segHtml(travelMin(km), km);
+    }
+    if(coord) prevCoord = coord;
+    return entryRow(e, i === 0, i === ents.length - 1, seg);
+  }).join('');
   return '<div class="card">'
     + '<div class="jour-head"><div><div class="t">' + esc(plan.title || 'La journée') + '</div>'
       + (plan.subtitle ? '<div class="s">' + esc(plan.subtitle) + '</div>' : '')
@@ -794,24 +840,36 @@ function planBlock(plan, c, several){
     + map
     + (map ? (href ? '<a class="maproute" href="' + esc(href) + '" target="_blank" rel="noopener">🗺️ Itinéraire complet dans Maps</a>' : '')
            + '<div class="maphint">Touchez un point pour le détail et l\'adresse.</div>' : '')
-    + '<div class="tl">' + ents.map(function(e, i){ return entryRow(e, i === 0, i === ents.length-1); }).join('') + '</div>'
+    + '<div class="tl">' + rowsHtml + '</div>'
     + '</div>';
+}
+
+/* --- la traversée, en carte complète et autonome -------------------------- */
+// Utilisée à la fois en tête de page les jours de pure traversée et en bas de
+// page l'hôtel du soir quand on dort à bord : mêmes informations, sans avoir
+// à ouvrir la fiche, pour ne jamais l'afficher deux fois dans la journée.
+function ferryFullCard(fs){
+  var f = fs.ferry || {};
+  return '<div class="card"><h3>⛴ La traversée</h3>'
+    + '<div class="hotel"><div class="nm">' + esc(f.from || '') + ' → ' + esc(f.to || '') + '</div>'
+    + (f.ship || f.cabin ? '<div class="ad">' + esc([f.ship, f.cabin].filter(Boolean).join(' · ')) + '</div>' : '')
+    + '<div class="flags">' + (f.departTime ? pill('time', '⛴ départ ' + f.departTime) : '')
+      + (f.checkInTime ? pill('time', '🎫 enregistrement ' + f.checkInTime) : '')
+      + (f.arriveTime ? pill('time', '⚓ arrivée ' + f.arriveTime) : '')
+      + (f.ref ? pill('book', '🎟 ' + f.ref) : '') + '</div></div>'
+    + '<div style="height:10px"></div>'
+    + (f.mapsLink ? '<a class="big-btn blue" href="' + esc(f.mapsLink) + '" target="_blank" rel="noopener">🧭 ' + esc(f.mapsLabel || 'Terminal') + '</a>' : '')
+    + '<button class="big-btn ghost" data-ferry="' + esc(fs.id) + '">🎟 Fiche traversée</button></div>';
 }
 
 /* --- 5. l'hôtel du soir --------------------------------------------------- */
 function hotelBlock(c){
+  // Jour de pure traversée : la carte "La traversée" est déjà en tête de
+  // page, pas besoin de la répéter ici.
+  if(c.kind === 'ferry') return '';
   var s = c.sleep;
   if(!s) return '<div class="card"><h3>🏠 Ce soir</h3><div class="empty">Nuit à bord ou retour à la maison.</div></div>';
-  if(isFerryStep(s)){
-    var f = s.ferry || {};
-    return '<div class="card"><h3>⛴ La nuit</h3>'
-      + '<div class="hotel"><div class="nm">' + esc(f.ship || 'Traversée') + '</div>'
-      + '<div class="ad">' + esc(f.cabin || '') + '</div>'
-      + '<div class="flags">' + (f.ref ? pill('book', '🎟 ' + f.ref) : '') + (f.departTime ? pill('time', '⛴ ' + f.departTime) : '') + '</div></div>'
-      + '<div style="height:10px"></div>'
-      + (f.mapsLink ? '<a class="big-btn blue" href="' + esc(f.mapsLink) + '" target="_blank" rel="noopener">🧭 ' + esc(f.mapsLabel || 'Terminal') + '</a>' : '')
-      + '<button class="big-btn ghost" data-ferry="' + esc(s.id) + '">🎟 Fiche traversée</button></div>';
-  }
+  if(isFerryStep(s)) return ferryFullCard(s);
   var h = s.hotel; if(!h) return '';
   var nav = navLink({mapsLink:h.mapsLink, address:h.address, coord:s.coord});
   var map = hasCoord(s) ? mapSlot({points:[{lat:s.coord.lat, lng:s.coord.lng, kind:'step', label:h.name, id:'step:'+s.id}],
@@ -867,18 +925,10 @@ function renderDay(){
   var f = planFor(curDay, c);
   var html = ctxBlock(c);
 
-  if(c.kind === 'ferry' || (c.kind === 'transit' && isFerryStep(c.from))){
-    // Jour de traversée : le strict nécessaire remonte tout en haut.
-    var fs = c.kind === 'ferry' ? c.step : c.from, ff = fs.ferry || {};
-    html += '<div class="card"><h3>⛴ La traversée</h3>'
-      + '<div class="hotel"><div class="nm">' + esc(ff.from) + ' → ' + esc(ff.to) + '</div>'
-      + '<div class="flags">' + (ff.departTime ? pill('time', '⛴ départ ' + ff.departTime) : '')
-        + (ff.checkInTime ? pill('time', '🎫 enregistrement ' + ff.checkInTime) : '')
-        + (ff.arriveTime ? pill('time', '⚓ arrivée ' + ff.arriveTime) : '')
-        + (ff.ref ? pill('book', '🎟 ' + ff.ref) : '') + '</div></div>'
-      + '<div style="height:10px"></div>'
-      + (ff.mapsLink ? '<a class="big-btn blue" href="' + esc(ff.mapsLink) + '" target="_blank" rel="noopener">🧭 ' + esc(ff.mapsLabel || 'Terminal') + '</a>' : '')
-      + '<button class="big-btn ghost" data-ferry="' + esc(fs.id) + '">🎟 Fiche traversée</button></div>';
+  if(c.kind === 'ferry'){
+    // Jour de pure traversée : une seule carte, tout en haut, avec tout ce
+    // qu'il faut sans avoir à ouvrir de fiche. Elle n'est pas répétée plus bas.
+    html += ferryFullCard(c.step);
   }
 
   if(f.plan){
@@ -886,14 +936,14 @@ function renderDay(){
   } else if(f.options.length > 1){
     html += '<div class="card"><h3>🧭 Choisir la journée</h3>'
       + '<div class="opts">' + f.options.map(function(p){ return optCard(p, false); }).join('') + '</div></div>';
-  } else if(c.kind !== 'fin'){
-    // Rien de programmé : on propose au moins ce qui est rattaché à l'étape.
+  } else if(c.kind !== 'fin' && c.kind !== 'ferry'){
+    // Rien de programmé : on propose au moins ce qui est rattaché à l'étape —
+    // et si même ça n'existe pas, on n'affiche rien plutôt qu'un bloc vide.
     var pool = c.kind === 'transit' ? itemsOfTransit(c.from.id, c.to.id)
              : (c.step ? itemsOfStep(c.step.id).filter(function(i){ return i.type !== 'resto' && !i.shop; }) : []);
-    html += '<div class="card"><h3>🧭 La journée</h3>'
-      + '<div class="empty" style="margin-bottom:10px">Journée libre — rien n\'est programmé.</div>'
-      + (pool.length ? '<div class="sub-h">Dans le coin</div>' + pool.map(function(i){ return resRow(i, '📍'); }).join('') : '')
-      + '</div>';
+    if(pool.length){
+      html += '<div class="card"><h3>🧭 Dans le coin</h3>' + pool.map(function(i){ return resRow(i, '📍'); }).join('') + '</div>';
+    }
   }
 
   html += hotelBlock(c);
@@ -903,45 +953,101 @@ function renderDay(){
 }
 
 /* ============================ PLANNING ==================================== */
+function planningMapCfg(c, f){
+  var stepPts = STEPS.map(function(s, i){
+    if(!hasCoord(s)) return null;
+    return {lat:s.coord.lat, lng:s.coord.lng, kind:isFerryStep(s) ? 'ferry' : 'step',
+            label:shortName(s.name), id:'step:' + s.id, num:String(i + 1)};
+  }).filter(Boolean);
+
+  var hiIds = {};
+  if(c.kind === 'transit'){ hiIds['step:' + c.from.id] = 1; hiIds['step:' + c.to.id] = 1; }
+  else if(c.step){ hiIds['step:' + c.step.id] = 1; }
+  var points = stepPts.map(function(p){ return hiIds[p.id] ? p : Object.assign({}, p, {muted:true}); });
+
+  var hiPath = [];
+  if(f.plan){
+    var pp = planPoints(f.plan, c);
+    hiPath = pp.path;
+    points = points.concat(pp.points.filter(function(p){ return p.id.indexOf('item:') === 0; }));
+  } else if(c.kind === 'transit'){
+    if(hasCoord(c.from)) hiPath.push({lat:c.from.coord.lat, lng:c.from.coord.lng});
+    if(hasCoord(c.to)) hiPath.push({lat:c.to.coord.lat, lng:c.to.coord.lng});
+  }
+
+  return {
+    points: points,
+    paths: [
+      {points:stepPts, color:MUTED, width:2, dash:'4 4', opacity:.6},
+      hiPath.length > 1 ? {points:hiPath, color:COL.step, width:3.5, dash:'', opacity:1} : null
+    ].filter(Boolean),
+    maxZoom:9, padding:26
+  };
+}
+
 function renderPlanning(){
-  var html = DAYS.map(function(iso){
-    var c = context(iso), f = planFor(iso, c), d = iso2date(iso);
-    var t = f.plan ? (f.plan.title || ctxTitle(c)) : (f.options.length > 1 ? f.options.length + ' options à choisir' : ctxTitle(c));
-    var s = ctxLabel(c) + (f.plan && f.options.length > 1 ? ' · ' + ctxTitle(c) : '')
-          + (c.sleep && c.sleep.hotel ? ' · 🛏 ' + shortName(c.sleep.name) : '');
+  var c = context(curDay), f = planFor(curDay, c);
+  var overview = mapSlot(planningMapCfg(c, f), 'big');
+  var html = overview
+    ? '<div class="card"><h3>🗺️ Le tour d\'ensemble</h3>' + overview
+      + '<div class="maphint">' + esc(ctxTitle(c)) + ' en surbrillance — touchez un point pour le détail.</div></div>'
+    : '';
+  html += '<h3 style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:0 0 10px">Les 17 jours</h3>';
+  html += DAYS.map(function(iso){
+    var dc = context(iso), df = planFor(iso, dc), d = iso2date(iso);
+    var t = df.plan ? (df.plan.title || ctxTitle(dc)) : (df.options.length > 1 ? df.options.length + ' options à choisir' : ctxTitle(dc));
+    var s = ctxLabel(dc) + (df.plan && df.options.length > 1 ? ' · ' + ctxTitle(dc) : '')
+          + (dc.sleep && dc.sleep.hotel ? ' · 🛏 ' + shortName(dc.sleep.name) : '');
     return '<button class="pl-day' + (iso === curDay ? ' now' : '') + '" data-day="' + iso + '">'
       + '<span class="d"><span class="n">' + d.getUTCDate() + '</span><span class="w">' + WD[d.getUTCDay()] + '</span></span>'
       + '<span class="b"><span class="t">' + esc(t) + '</span><span class="s">' + esc(s) + '</span></span></button>';
   }).join('');
-  document.getElementById('view').innerHTML = '<h3 style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:0 0 10px">Les 17 jours</h3>' + html;
+  document.getElementById('view').innerHTML = html;
+  mountMaps();
 }
 
 /* ============================ ADRESSES ==================================== */
-var restoFilter = 'all';
+var restoFilter = 'all', restoScope = 'day';
+function uniqueSteps(list){
+  var seen = {}, out = [];
+  list.forEach(function(s){ if(s && !isFerryStep(s) && !seen[s.id]){ seen[s.id] = 1; out.push(s); } });
+  return out;
+}
 function renderRestos(){
-  var groups = STEPS.filter(function(s){ return !isFerryStep(s); }).map(function(s){
-    return {s:s, restos:restosOfStep(s.id), shops:shopsOfStep(s.id)};
-  });
-  var filters = '<div class="filters"><button data-rf="all" class="' + (restoFilter === 'all' ? 'on' : '') + '">Tout</button>'
+  var c = context(curDay);
+  // Filtrée par défaut sur l'étape de la date active dans la frise : c'est
+  // elle qui compte quand on cherche où manger ce soir-là, pas les 17 jours.
+  var daySteps = uniqueSteps([c.sleep, c.kind === 'transit' ? c.from : null]);
+  var steps = restoScope === 'day' ? daySteps : STEPS.filter(function(s){ return !isFerryStep(s); });
+
+  var filters = '<div class="filters">'
+    + '<button data-rf="all" class="' + (restoFilter === 'all' ? 'on' : '') + '">Tout</button>'
     + '<button data-rf="kids" class="' + (restoFilter === 'kids' ? 'on' : '') + '">Menu enfant</button>'
-    + '<button data-rf="shop" class="' + (restoFilter === 'shop' ? 'on' : '') + '">Courses</button></div>';
-  var html = groups.map(function(g){
-    var rs = restoFilter === 'kids' ? g.restos.filter(function(r){ return r.kidsMenu; })
-           : restoFilter === 'shop' ? [] : g.restos;
-    var sh = restoFilter === 'kids' ? [] : g.shops;
+    + '<button data-rf="shop" class="' + (restoFilter === 'shop' ? 'on' : '') + '">Courses</button></div>'
+    + '<div class="filters">'
+    + '<button data-rs="day" class="' + (restoScope === 'day' ? 'on' : '') + '">' + esc(ctxTitle(c)) + '</button>'
+    + '<button data-rs="all" class="' + (restoScope === 'all' ? 'on' : '') + '">Toutes les étapes</button></div>';
+
+  var html = steps.map(function(s){
+    var rs = restoFilter === 'kids' ? restosOfStep(s.id).filter(function(r){ return r.kidsMenu; })
+           : restoFilter === 'shop' ? [] : restosOfStep(s.id);
+    var sh = restoFilter === 'kids' ? [] : shopsOfStep(s.id);
     if(!rs.length && !sh.length) return '';
-    return '<div class="card"><h3>' + esc(shortName(g.s.name)) + '</h3>'
+    return '<div class="card"><h3>' + esc(shortName(s.name)) + '</h3>'
       + (rs.length ? rs.map(function(r){ return resRow(r, '🍽️'); }).join('') : '')
       + (sh.length ? '<div class="sub-h">Courses</div>' + sh.map(function(r){ return resRow(r, '🛒'); }).join('') : '')
       + '</div>';
   }).join('');
+
   // Les restaurants rattachés à une journée de sortie plutôt qu'à un couchage.
-  var sorties = ITEMS.filter(function(i){ return i.type === 'resto' && i.link && i.link.kind === 'transit'; });
+  var sorties = restoScope === 'day'
+    ? (c.kind === 'transit' ? itemsOfTransit(c.from.id, c.to.id).filter(function(i){ return i.type === 'resto'; }) : [])
+    : ITEMS.filter(function(i){ return i.type === 'resto' && i.link && i.link.kind === 'transit'; });
   if(sorties.length && restoFilter !== 'shop'){
     var ss = restoFilter === 'kids' ? sorties.filter(function(r){ return r.kidsMenu; }) : sorties;
     if(ss.length) html += '<div class="card"><h3>Sur la route</h3>' + ss.map(function(r){ return resRow(r, '🍽️'); }).join('') + '</div>';
   }
-  document.getElementById('view').innerHTML = filters + (html || '<div class="empty">Rien à afficher avec ce filtre.</div>');
+  document.getElementById('view').innerHTML = filters + (html || '<div class="empty">Rien à afficher avec ce filtre pour cette étape.</div>');
 }
 
 /* ============================ ROUTAGE ===================================== */
@@ -968,6 +1074,7 @@ function bindView(){
     b.addEventListener('click', function(){ go(b.dataset.day); tab = 'today'; syncTabs(); render(); });
   });
   v.querySelectorAll('[data-rf]').forEach(function(b){ b.addEventListener('click', function(){ restoFilter = b.dataset.rf; render(); }); });
+  v.querySelectorAll('[data-rs]').forEach(function(b){ b.addEventListener('click', function(){ restoScope = b.dataset.rs; render(); }); });
 }
 function syncTabs(){
   document.querySelectorAll('.tabbar button').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
@@ -976,7 +1083,10 @@ function go(iso){ if(DAYS.indexOf(iso) < 0) return; curDay = iso; lsSet(LS_DAY, 
 
 document.getElementById('dayStrip').addEventListener('click', function(e){
   var b = e.target.closest('[data-day]'); if(!b) return;
-  go(b.dataset.day); if(tab !== 'today'){ tab = 'today'; syncTabs(); } render();
+  // On garde l'onglet actif : changer de date dans la frise doit filtrer
+  // l'onglet Adresses ou remettre à jour la carte du Planning, pas forcer
+  // un retour sur Journée.
+  go(b.dataset.day); render();
 });
 document.getElementById('prevDay').addEventListener('click', function(){ go(addDays(curDay, -1)); render(); });
 document.getElementById('nextDay').addEventListener('click', function(){ go(addDays(curDay, 1)); render(); });
