@@ -4,7 +4,7 @@
 // qui permet à Antoine de mettre à jour data.json sur GitHub sans qu'Amélie
 // ait quoi que ce soit à faire : dès qu'elle a du réseau, le fetch réussit et
 // remplace la version en cache ; hors ligne, la dernière version connue sert.
-const CACHE_NAME = "carnet-irlande-v3";
+const CACHE_NAME = "carnet-irlande-v4";
 const ASSETS = ["./index.html", "./data.json", "./manifest.json", "./icon-192.png", "./icon-512.png", "./icon-maskable.png"];
 
 self.addEventListener("install", (e) => {

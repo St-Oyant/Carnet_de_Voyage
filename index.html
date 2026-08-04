@@ -115,8 +115,19 @@
   .tl-line i{position:absolute; left:0; top:5px; width:12px; height:12px; border-radius:50%; background:var(--accent); border:2px solid var(--bg);}
   .tl-line i.repas{background:var(--resto);} .tl-line i.bout{background:var(--muted);} .tl-line i.act{background:var(--accent);}
   .tl-body{flex:1; min-width:0; padding-bottom:16px;}
-  .tl-seg{font-size:11px; color:var(--muted); margin-bottom:3px; display:flex; align-items:center; gap:4px;}
   .tl-t{font-size:15.5px; font-weight:700; line-height:1.25;}
+
+  /* Trajet entre deux arrêts : sa propre ligne dans la frise, avec la voiture
+     dans la colonne des horaires et un point creux sur l'axe. Demande du
+     4 août — "la voiture devrait ressortir presque plus que l'heure" : le
+     temps de route se lit désormais à une taille proche de celle du titre,
+     en bleu route, distinct du vert des horaires. */
+  .tl-row.seg .tl-body{padding-bottom:14px;}
+  .tl-car{flex:0 0 46px; text-align:right; font-size:17px; line-height:1.1; padding-top:0;}
+  .tl-line i.route{top:6px; left:1px; width:10px; height:10px; border-radius:50%;
+                   background:var(--bg); border:2px solid var(--accent2);}
+  .tl-seg{font-size:14.5px; font-weight:800; color:var(--accent2); line-height:1.2; padding-top:1px;}
+  .tl-seg .km{font-weight:600; color:var(--muted);}
   .tl-n{font-size:12.5px; color:var(--muted); margin-top:3px; line-height:1.4;}
   .tl-body .badges{margin-top:6px;}
 
@@ -901,10 +912,17 @@ function planPoints(plan, c){
 }
 
 // Distance/temps de route depuis l'arrêt précédent, même calcul que le
-// builder ("🚗 50 min · ~51 km depuis l'arrêt précédent") — demandé par
-// Antoine pour retrouver ce repère dans le carnet.
-function segHtml(min, km){
-  return '<div class="tl-seg">🚗 ' + esc(durTxt(min)) + ' · ~' + Math.round(km) + ' km depuis l\'arrêt précédent</div>';
+// builder. Depuis le 4 août c'est une ligne de frise à part entière — la
+// voiture occupe la colonne des horaires, un point creux marque le trajet sur
+// l'axe et le temps de route se lit à une taille proche du titre : noyée en
+// 11px sous le titre de l'arrêt suivant, l'information passait inaperçue.
+function segRow(min, km){
+  return '<div class="tl-row seg">'
+    + '<div class="tl-car">🚗</div>'
+    + '<div class="tl-line"><i class="route"></i></div>'
+    + '<div class="tl-body"><div class="tl-seg">' + esc(durTxt(min))
+      + ' <span class="km">· ~' + Math.round(km) + ' km de route</span></div></div>'
+    + '</div>';
 }
 
 function entryRow(e, isFirst, isLast, seg){
@@ -912,7 +930,7 @@ function entryRow(e, isFirst, isLast, seg){
   var kind = e.kind || (it ? 'activite' : 'libre');
   var dot = kind === 'repas' ? 'repas' : ((kind === 'depart' || kind === 'retour') ? 'bout' : 'act');
   var title = e.label || (it ? it.name : (kind === 'repas' ? 'Repas' : 'Temps libre'));
-  var body = (seg || '') + '<div class="tl-t">' + esc(title) + '</div>';
+  var body = '<div class="tl-t">' + esc(title) + '</div>';
   if(it && e.label && e.label !== it.name) body += '<div class="tl-n">' + esc(it.name) + '</div>';
   if(e.note) body += '<div class="tl-n">' + esc(e.note) + '</div>';
   if(it) body += badgesFor(it);
@@ -957,10 +975,10 @@ function planBlock(plan, c, several){
     var seg = '';
     if(i > 0 && prevCoord && coord){
       var km = roadKm(prevCoord, coord);
-      seg = segHtml(travelMin(km), km);
+      if(Math.round(km) > 0) seg = segRow(travelMin(km), km);
     }
     if(coord) prevCoord = coord;
-    return entryRow(e, i === 0, i === ents.length - 1, seg);
+    return seg + entryRow(e, i === 0, i === ents.length - 1);
   }).join('');
   return '<div class="card">'
     + '<div class="jour-head"><div><div class="t">' + esc(plan.title || 'La journée') + '</div>'
