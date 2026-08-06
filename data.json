@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "name": "Irlande - Août 2026",
   "steps": [
     {
@@ -2139,6 +2139,60 @@
       "cuisine": "Café de parc, plats du jour",
       "priceAdult": "8-15 €",
       "kidsMenu": "Plats simples, aire de jeux juste à côté"
+    },
+    {
+      "id": "kil_gap",
+      "type": "activite",
+      "name": "Gap of Dunloe — bus, calèche & bateau",
+      "mapsLink": "https://www.google.com/maps/search/?api=1&query=Deros%20Tours%2C%2022%20Main%20Street%2C%20Killarney%2C%20Co.%20Kerry%20V93%20NP74",
+      "image": "",
+      "description": "La grande boucle classique de Killarney, sans toucher à la voiture. Bus jusqu'à Kate Kearney's Cottage, traversée du col glaciaire entre les cinq lacs (Wishing Bridge, tête du Gap) jusqu'à Lord Brandon's Cottage, puis bateau à travers les trois lacs de Killarney pour ressortir à Ross Castle, et navette de retour en ville.",
+      "duration": 300,
+      "link": {
+        "kind": "step",
+        "stepId": "s2"
+      },
+      "indoor": false,
+      "coord": {
+        "lat": 52.06158,
+        "lng": -9.51092,
+        "approx": true
+      },
+      "booking": {
+        "ref": "WAT0-103-8831-00-082-147-5",
+        "provider": "Deros Tours — voucher DoIreland n° WAT0-103-8831-00-082-147-5",
+        "date": "2026-08-07",
+        "time": "10:30",
+        "endTime": null,
+        "arriveBy": "10:15",
+        "price": "170 € payés en ligne + ~140 € en espèces pour la calèche",
+        "party": "Déclarés 3 adultes + 1 enfant (nous sommes 2 adultes + 2 enfants)",
+        "strict": true,
+        "notes": "🎟 VOUCHER À PRÉSENTER SUR LE TÉLÉPHONE — pas besoin de l'imprimer. Réservé au nom d'Antoine Saintoyant. Le télécharger dans le téléphone ce soir : il n'y a pas de réseau dans le Gap.\n📍 Rendez-vous au bureau Deros Tours, 22 Main Street, Killarney, V93 NP74 — 3 minutes à pied de l'appartement, la voiture reste garée toute la journée.\n☎ Deros, ligne directe : (064) 663 1251 — c'est eux qu'il faut appeler en cas de retard le matin, pas DoIreland.\n👥 Le tarif famille plantait sur le site du revendeur (« Unable to Correctly Map family PAX Type ») : la réservation est passée en déclarant 3 adultes + 1 enfant. Ce sont 4 places, c'est ce qui compte au comptage. On a payé 10 € de trop pour un enfant, sans conséquence.\n💶 LA CALÈCHE N'EST PAS COMPRISE : environ 35 € par personne, soit ~140 € la voiture de 4, à payer EN ESPÈCES aux jarveys à Kate Kearney's Cottage. Sans elle, la traversée du Gap se fait à pied : 11 km, 2h30 à 3h. Retirer le liquide avant de partir.\n💶 Le déjeuner à Lord Brandon's Cottage est également en espèces uniquement.\n🧥 Col de montagne et bateau ouvert : coupe-vent et chaussures fermées, même s'il fait beau à Killarney.\n📄 Référence de réservation à compléter depuis l'e-mail de confirmation."
+      }
+    },
+    {
+      "id": "kil_lordbrandon",
+      "type": "resto",
+      "name": "Lord Brandon's Cottage",
+      "mapsLink": "https://www.google.com/maps/search/?api=1&query=Lord%20Brandon's%20Cottage%2C%20Killarney%2C%20Co.%20Kerry",
+      "image": "",
+      "description": "Café en pierre au bout du Gap, à l'embarcadère des bateaux, accessible seulement à pied, en calèche ou par le lac. Soupes, sandwichs, scones, thé — simple et chaud. ⚠ ESPÈCES UNIQUEMENT, aucun terminal de carte. Tables dehors au bord de l'eau.",
+      "duration": 0,
+      "link": {
+        "kind": "activite",
+        "itemId": "kil_gap"
+      },
+      "coord": {
+        "lat": 51.9575,
+        "lng": -9.6975,
+        "approx": true
+      },
+      "booking": null,
+      "rating": "Café de l'embarcadère, au bout du Gap",
+      "cuisine": "Irlandais simple",
+      "priceAdult": "8-14 €",
+      "kidsMenu": "Soupe + scone, ou sandwich — rien de dédié aux enfants mais tout leur convient"
     }
   ],
   "plans": [
@@ -3110,6 +3164,58 @@
         "stepId": "s6"
       },
       "startTime": "10:00",
+      "autoTimes": false
+    },
+    {
+      "id": "pgap",
+      "link": {
+        "kind": "step",
+        "stepId": "s2"
+      },
+      "stepId": "s2",
+      "date": "2026-08-07",
+      "title": "Le Gap of Dunloe",
+      "subtitle": "Bus jusqu'à Kate Kearney's, calèche par le col, bateau sur les trois lacs — et la voiture qui ne bouge pas de la journée",
+      "startTime": "10:15",
+      "routeMapsLink": "",
+      "distance": "Journée sans voiture — le bureau Deros est à 3 min à pied de High Street",
+      "entries": [
+        {
+          "time": "10:15",
+          "kind": "depart",
+          "itemId": "",
+          "label": "À pied jusqu'au bureau Deros — 22 Main Street",
+          "note": "Sortir de l'appartement à 10h15 : c'est 3 minutes de marche, mais le bus part à 10h30 pile.\n💶 Avoir les ~140 € en espèces pour la calèche AVANT de partir — il n'y a pas de distributeur au Gap.\n🧥 Coupe-vent et chaussures fermées : on passe un col et on finit sur un bateau ouvert."
+        },
+        {
+          "time": "10:30",
+          "kind": "activite",
+          "itemId": "kil_gap",
+          "note": "Bus jusqu'à Kate Kearney's Cottage (~20 min), où on négocie la calèche avec les jarveys. Puis 1h30 à 2h de col : les cinq lacs, le Wishing Bridge, la tête du Gap. On redescend sur Lord Brandon's Cottage."
+        },
+        {
+          "time": "13:00",
+          "kind": "repas",
+          "label": "Déjeuner à Lord Brandon's Cottage",
+          "note": "Halte à l'embarcadère en attendant le bateau. ⚠ Espèces uniquement. Il y a de la place pour que les enfants courent au bord de l'eau.",
+          "dwell": 60,
+          "options": [
+            "kil_lordbrandon"
+          ]
+        },
+        {
+          "time": "15:45",
+          "kind": "retour",
+          "itemId": "",
+          "label": "Retour à Killarney",
+          "note": "Bateau d'environ 1h30 à travers les trois lacs jusqu'à Ross Castle, puis navette Deros jusqu'en ville. Retour annoncé vers 15h30-16h — l'après-midi est libre ensuite, et l'appartement est à deux pas."
+        }
+      ],
+      "dinnerOptions": [
+        "i18",
+        "i19",
+        "i20"
+      ],
       "autoTimes": false
     }
   ]
